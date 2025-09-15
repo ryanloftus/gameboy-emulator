@@ -1,6 +1,7 @@
 #include <stdio.h>
 
-int main() {
+int main()
+{
     printf("Running tests\n\n");
 
     int passed = 0;
