@@ -1,13 +1,19 @@
 #ifndef _TESTING_UTILS_H_
 #define _TESTING_UTILS_H_
 
+#define PASSED 0
+#define FAILED 1
+
+void run_tests(int (*tests[])(void), int num_tests);
 
 void bad_assert(const char *expr, const char *file, const char *func, int line);
 
 #define assert(expr) \
     do { \
-        bad_assert(#expr, __FILE__, __func__, __LINE__); \
-        if (!(expr)) return FAILED; \
+        if (!(expr)) { \
+            bad_assert(#expr, __FILE__, __func__, __LINE__); \
+            return FAILED; \
+        } \
     } while (0)
 
 #endif

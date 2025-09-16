@@ -4,9 +4,6 @@
 #include <stdio.h>
 #include <memory.h>
 
-const int FAILED = 0;
-const int PASSED = 1;
-
 int when_noop_then_inc_pc_only()
 {
     virtual_cpu cpu;
@@ -18,43 +15,26 @@ int when_noop_then_inc_pc_only()
 
     fetch_execute(&cpu, &code);
 
-    return cpu.a == prev_state.a &&
-        cpu.b == prev_state.b &&
-        cpu.c == prev_state.c &&
-        cpu.d == prev_state.d &&
-        cpu.e == prev_state.e &&
-        cpu.f == prev_state.f &&
-        cpu.h == prev_state.h &&
-        cpu.l == prev_state.l &&
-        cpu.sp == prev_state.sp &&
-        cpu.pc == prev_state.pc + 1;
+    assert(cpu.a == prev_state.a);
+    assert(cpu.b == prev_state.b);
+    assert(cpu.c == prev_state.c);
+    assert(cpu.d == prev_state.d);
+    assert(cpu.e == prev_state.e);
+    assert(cpu.f == prev_state.f);
+    assert(cpu.h == prev_state.h);
+    assert(cpu.l == prev_state.l);
+    assert(cpu.sp == prev_state.sp);
+    assert(cpu.pc == prev_state.pc + 1);
+
+    return PASSED;
 }
 
 int main()
 {
-    printf("Running tests\n\n");
-
     int (*tests[])(void) = { when_noop_then_inc_pc_only };
+    int num_tests = sizeof(tests) / sizeof(void*);
 
-    int total = 1;
-    int passed = 0;
-    int failed = 0;
-
-    for (int i = 0; i < total; ++i)
-    {
-        if (tests[i]() == PASSED)
-        {
-            passed++;
-        }
-        else
-        {
-            failed++;
-        }
-    }
-
-    printf("Passed: %d tests\n", passed);
-    printf("Failed: %d tests\n", failed);
-    printf("Total: %d\n", total);
+    run_tests(tests, num_tests);
 
     return 0;
 }
