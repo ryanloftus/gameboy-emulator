@@ -9,9 +9,4 @@ Run `make BUILD=debug` to build the debug version.
 
 ## Testing
 
-Run unit tests with
-
-```
-make tests
-./run_tests
-```
+Run unit tests with `test.sh`.
