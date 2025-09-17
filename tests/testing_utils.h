@@ -6,12 +6,12 @@
 
 void run_tests(int (*tests[])(void), int num_tests);
 
-void bad_assert(const char *expr, const char *file, const char *func, int line);
+void test_assert(const char *expr, const char *file, const char *func, int line);
 
 #define assert(expr) \
     do { \
         if (!(expr)) { \
-            bad_assert(#expr, __FILE__, __func__, __LINE__); \
+            test_assert(#expr, __FILE__, __func__, __LINE__); \
             return FAILED; \
         } \
     } while (0)

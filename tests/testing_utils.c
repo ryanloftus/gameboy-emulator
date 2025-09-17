@@ -32,7 +32,7 @@ void run_tests(int (*tests[])(void), int num_tests)
     return;
 }
 
-void bad_assert(const char *expr, const char *file, const char *func, int line)
+void test_assert(const char *expr, const char *file, const char *func, int line)
 {
     printf("Assertion Failed: %s at %s:%s:%d\n", expr, file, func, line);
 }

@@ -29,9 +29,30 @@ int when_noop_then_inc_pc_only()
     return PASSED;
 }
 
+int when_inc_b_then_b_incremented()
+{
+    virtual_cpu cpu;
+    virtual_cpu prev_state;
+    uint8_t code = 0b00000100;
+
+    create_virtual_cpu(&cpu);
+    memcpy(&prev_state, &cpu, sizeof(virtual_cpu));
+
+    fetch_execute(&cpu, &code);
+
+    assert(cpu.b == prev_state.b + 1);
+    assert(cpu.pc == prev_state.pc + 1);
+
+    return PASSED;
+}
+
 int main()
 {
-    int (*tests[])(void) = { when_noop_then_inc_pc_only };
+    int (*tests[])(void) =
+    {
+        when_noop_then_inc_pc_only,
+        when_inc_b_then_b_incremented
+    };
     int num_tests = sizeof(tests) / sizeof(void*);
 
     run_tests(tests, num_tests);
