@@ -9,22 +9,22 @@ uint8_t* get_r8(virtual_cpu *cpu, uint8_t r8_id)
     switch (r8_id)
     {
         case 0:
-            return &(cpu->b);
+            return (uint8_t*)&(cpu->bc);
         case 1:
-            return &(cpu->c);
+            return (uint8_t*)&(cpu->bc) + 1;
         case 2:
-            return &(cpu->d);
+            return (uint8_t*)&(cpu->de);
         case 3:
-            return &(cpu->e);
+            return (uint8_t*)&(cpu->de) + 1;
         case 4:
-            return &(cpu->h);
+            return (uint8_t*)&(cpu->hl);
         case 5:
-            return &(cpu->l);
+            return (uint8_t*)&(cpu->hl) + 1;
         case 6:
             // TODO: update this when memory is implemented
             debug_assert(0);
         case 7:
-            return &(cpu->a);
+            return (uint8_t*)&(cpu->af);
         default:
             debug_assert(0);
     }
@@ -44,6 +44,13 @@ void inc_r8(virtual_cpu *cpu, uint8_t r8_id)
     return;
 }
 
+void dec_r8(virtual_cpu *cpu, uint8_t r8_id)
+{
+    uint8_t *r8 = get_r8(cpu, r8_id);
+    (*r8)--;
+    return;
+}
+
 void execute_block_zero_instruction(virtual_cpu *cpu, uint8_t opcode)
 {
     if (opcode == 0)
@@ -54,8 +61,15 @@ void execute_block_zero_instruction(virtual_cpu *cpu, uint8_t opcode)
     }
     else if ((opcode & 0b111) == 4)
     {
-        uint8_t r8 = opcode & 0b111000;
+        uint8_t r8 = (opcode & 0b111000) >> 3;
         inc_r8(cpu, r8);
+        cpu->pc += 1;
+        return;
+    }
+    else if ((opcode & 0b111) == 5)
+    {
+        uint8_t r8 = (opcode & 0b111000) >> 3;
+        dec_r8(cpu, r8);
         cpu->pc += 1;
         return;
     }
