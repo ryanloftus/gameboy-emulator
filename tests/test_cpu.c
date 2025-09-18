@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <memory.h>
 
-int when_noop_then_inc_pc_only()
+int test_noop()
 {
     virtual_cpu cpu;
     uint8_t code = 0;
@@ -23,90 +23,47 @@ int when_noop_then_inc_pc_only()
     return PASSED;
 }
 
-int when_inc_b_then_b_incremented()
+int test_inc_r8()
 {
     virtual_cpu cpu;
-    virtual_cpu prev_state;
-    uint8_t code = 0b00000100;
-
-    create_virtual_cpu(&cpu);
-    memcpy(&prev_state, &cpu, sizeof(virtual_cpu));
-
-    fetch_execute(&cpu, &code);
-
-    assert(cpu.bc == prev_state.bc + 1);
-    assert(cpu.pc == prev_state.pc + 1);
-
-    return PASSED;
-}
-
-int when_inc_c_then_c_incremented()
-{
-    virtual_cpu cpu;
-    virtual_cpu prev_state;
-    uint8_t code = 0b00001100;
-
-    create_virtual_cpu(&cpu);
-    memcpy(&prev_state, &cpu, sizeof(virtual_cpu));
-
-    fetch_execute(&cpu, &code);
-
-    assert(cpu.bc == prev_state.bc + (1 << 8));
-    assert(cpu.pc == prev_state.pc + 1);
-
-    return PASSED;
-}
-
-int when_dec_b_then_b_decremented()
-{
-    virtual_cpu cpu;
-    virtual_cpu prev_state;
-    uint8_t code = 0b00000101;
-
-    create_virtual_cpu(&cpu);
-    memcpy(&prev_state, &cpu, sizeof(virtual_cpu));
-
-    fetch_execute(&cpu, &code);
-
-    assert(cpu.bc == 0b11111111);
-    assert(cpu.pc == prev_state.pc + 1);
-
-    return PASSED;
-}
-
-int when_dec_c_then_c_decremented()
-{
-    virtual_cpu cpu;
-    virtual_cpu prev_state;
-    uint8_t code = 0b00001101;
-
-    create_virtual_cpu(&cpu);
-    memcpy(&prev_state, &cpu, sizeof(virtual_cpu));
-
-    fetch_execute(&cpu, &code);
-
-    assert(cpu.bc == 0b1111111100000000);
-    assert(cpu.pc == prev_state.pc + 1);
-
-    return PASSED;
-}
-
-int when_inc_bc_then_bc_incremented()
-{
-    virtual_cpu cpu;
-    uint8_t code = 0b000011;
+    uint8_t code[] = {0b00001100, 0b00000100};
 
     create_virtual_cpu(&cpu);
 
-    fetch_execute(&cpu, &code);
+    fetch_execute(&cpu, code);
 
-    assert(cpu.bc == 1);
+    assert(cpu.bc == (1 << 8));
     assert(cpu.pc == 1);
 
+    fetch_execute(&cpu, code);
+
+    assert(cpu.bc == (1 << 8) + 1);
+    assert(cpu.pc == 2);
+
     return PASSED;
 }
 
-int when_inc_hl_then_hl_incremented()
+int test_dec_r8()
+{
+    virtual_cpu cpu;
+    uint8_t code[] = {0b00001101, 0b00000101};
+
+    create_virtual_cpu(&cpu);
+
+    fetch_execute(&cpu, code);
+
+    assert(cpu.bc == 0b1111111100000000);
+    assert(cpu.pc == 1);
+
+    fetch_execute(&cpu, code);
+
+    assert(cpu.bc == 0b1111111111111111);
+    assert(cpu.pc == 2);
+
+    return PASSED;
+}
+
+int test_inc_r16()
 {
     virtual_cpu cpu;
     uint8_t code = 0b100011;
@@ -121,22 +78,7 @@ int when_inc_hl_then_hl_incremented()
     return PASSED;
 }
 
-int when_dec_bc_then_bc_decremented()
-{
-    virtual_cpu cpu;
-    uint8_t code = 0b001011;
-
-    create_virtual_cpu(&cpu);
-
-    fetch_execute(&cpu, &code);
-
-    assert(cpu.bc == 0b1111111111111111);
-    assert(cpu.pc == 1);
-
-    return PASSED;
-}
-
-int when_dec_hl_then_hl_decremented()
+int test_dec_r16()
 {
     virtual_cpu cpu;
     uint8_t code = 0b101011;
@@ -151,19 +93,21 @@ int when_dec_hl_then_hl_decremented()
     return PASSED;
 }
 
+int test_add_hl_r16()
+{
+    return PASSED;
+}
+
 int main()
 {
     int (*tests[])(void) =
     {
-        when_noop_then_inc_pc_only,
-        when_inc_b_then_b_incremented,
-        when_inc_c_then_c_incremented,
-        when_dec_b_then_b_decremented,
-        when_dec_c_then_c_decremented,
-        when_inc_bc_then_bc_incremented,
-        when_inc_hl_then_hl_incremented,
-        when_dec_bc_then_bc_decremented,
-        when_dec_hl_then_hl_decremented
+        test_noop,
+        test_inc_r8,
+        test_dec_r8,
+        test_inc_r16,
+        test_dec_r16,
+        test_add_hl_r16
     };
     int num_tests = sizeof(tests) / sizeof(void*);
 
