@@ -5,22 +5,6 @@
 #include <stdio.h>
 #include <memory.h>
 
-void execute_block_zero_instruction(virtual_cpu *cpu, uint8_t opcode)
-{
-    for (size_t i = 0; i < block_zero_instructions_count; ++i)
-    {
-        if ((opcode & block_zero_instructions[i].bitmask) == block_zero_instructions[i].pattern)
-        {
-            block_zero_instructions[i].exec(cpu, opcode);
-            cpu->pc += block_zero_instructions[i].bytes;
-            return;
-        }
-    }
-
-    printf("unimplemented opcode %d\n", opcode);
-    return;
-}
-
 void create_virtual_cpu(virtual_cpu *cpu)
 {
     memset(cpu, 0, sizeof(virtual_cpu));
@@ -38,6 +22,7 @@ void fetch_execute(virtual_cpu *cpu, uint8_t *code)
             break;
         case 1:
         case 2:
+            execute_block_two_instruction(cpu, opcode);
         case 3:
         default:
             printf("unimplemented opcode %d\n", opcode);

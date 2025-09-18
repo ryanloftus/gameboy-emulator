@@ -18,4 +18,10 @@ typedef struct
 extern const Instruction block_zero_instructions[];
 extern const size_t block_zero_instructions_count;
 
+void execute_block_zero_instruction(virtual_cpu *cpu, uint8_t opcode);
+void execute_block_one_instruction(virtual_cpu *cpu, uint8_t opcode);
+void execute_block_two_instruction(virtual_cpu *cpu, uint8_t opcode);
+void execute_block_three_instruction(virtual_cpu *cpu, uint8_t opcode);
+
+
 #endif

@@ -1,4 +1,5 @@
 # gameboy-emulator
+
 A Gameboy Emulator.
 
 ## Build and Run
@@ -9,4 +10,8 @@ Run `make BUILD=debug` to build the debug version.
 
 ## Testing
 
-Run unit tests with `test.sh`.
+Run tests with `test.sh`.
+
+## References
+
+[gbdev.io](https://gbdev.io/pandocs/CPU_Instruction_Set.html)
