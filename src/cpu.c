@@ -32,6 +32,25 @@ uint8_t* get_r8(virtual_cpu *cpu, uint8_t r8_id)
     return NULL;
 }
 
+uint16_t* get_r16(virtual_cpu *cpu, uint8_t r16_id)
+{
+    switch (r16_id)
+    {
+        case 0:
+            return &(cpu->bc);
+        case 1:
+            return &(cpu->de);
+        case 2:
+            return &(cpu->hl);
+        case 3:
+            return &(cpu->sp);
+        case 4:
+            debug_assert(0);
+    }
+
+    return NULL;
+}
+
 void noop()
 {
     return;
@@ -51,33 +70,57 @@ void dec_r8(virtual_cpu *cpu, uint8_t r8_id)
     return;
 }
 
+void inc_r16(virtual_cpu *cpu, uint8_t r16_id)
+{
+    uint16_t *r16 = get_r16(cpu, r16_id);
+    (*r16)++;
+    return;
+}
+
+void dec_r16(virtual_cpu *cpu, uint8_t r16_id)
+{
+    uint16_t *r16 = get_r16(cpu, r16_id);
+    (*r16)--;
+    return;
+}
+
 void execute_block_zero_instruction(virtual_cpu *cpu, uint8_t opcode)
 {
     if (opcode == 0)
     {
         noop();
         cpu->pc += 1;
-        return;
     }
     else if ((opcode & 0b111) == 4)
     {
         uint8_t r8 = (opcode & 0b111000) >> 3;
         inc_r8(cpu, r8);
         cpu->pc += 1;
-        return;
     }
     else if ((opcode & 0b111) == 5)
     {
         uint8_t r8 = (opcode & 0b111000) >> 3;
         dec_r8(cpu, r8);
         cpu->pc += 1;
-        return;
+    }
+    else if ((opcode & 0b1111) == 0b11)
+    {
+        uint8_t r16 = (opcode & 0b110000) >> 4;
+        inc_r16(cpu, r16);
+        cpu->pc += 1;
+    }
+    else if ((opcode & 0b1111) == 0b1011)
+    {
+        uint8_t r16 = (opcode & 0b110000) >> 4;
+        dec_r16(cpu, r16);
+        cpu->pc += 1;
     }
     else
     {
         printf("unimplemented opcode %d\n", opcode);
-        return;
     }
+
+    return;
 }
 
 void create_virtual_cpu(virtual_cpu *cpu)
