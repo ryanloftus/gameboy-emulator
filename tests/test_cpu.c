@@ -95,6 +95,17 @@ int test_dec_r16()
 
 int test_add_hl_r16()
 {
+    virtual_cpu cpu;
+    uint8_t code = 0b011001;
+
+    create_virtual_cpu(&cpu);
+    cpu.de = 31;
+
+    fetch_execute(&cpu, &code);
+
+    assert(cpu.hl == 31);
+    assert(cpu.pc == 1);
+
     return PASSED;
 }
 
