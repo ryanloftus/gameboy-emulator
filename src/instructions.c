@@ -58,7 +58,6 @@ void set_flag(virtual_cpu *cpu, uint8_t flag)
 {
     debug_assert(flag >= 4 && flag <= 7);
     cpu->f |= (1 << flag);
-    printf("set %d\n", flag);
 }
 
 void perform_8bit_add(virtual_cpu *cpu, uint8_t *dest, uint8_t addend1, uint8_t addend2)
