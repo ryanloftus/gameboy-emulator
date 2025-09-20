@@ -60,11 +60,14 @@ void set_flag(virtual_cpu *cpu, uint8_t flag)
     cpu->f |= (1 << flag);
 }
 
+void clear_flag(virtual_cpu *cpu, uint8_t flag)
+{
+    debug_assert(flag >= 4 && flag <= 7);
+    cpu->f ^= (1 << flag);
+}
+
 void perform_8bit_add(virtual_cpu *cpu, uint8_t *dest, uint8_t addend1, uint8_t addend2)
 {
-    uint32_t x = (uint32_t)addend1;
-    uint32_t y = (uint32_t)addend2;
-    uint32_t arithmetic_sum = x + y;
     uint8_t cpu_sum = addend1 + addend2;
 
     if (cpu_sum == 0)
@@ -72,7 +75,7 @@ void perform_8bit_add(virtual_cpu *cpu, uint8_t *dest, uint8_t addend1, uint8_t 
         set_flag(cpu, FLAG_ZERO);
     }
 
-    if (arithmetic_sum > cpu_sum)
+    if (cpu_sum < addend1)
     {
         set_flag(cpu, FLAG_CARRY);
     }
@@ -82,7 +85,43 @@ void perform_8bit_add(virtual_cpu *cpu, uint8_t *dest, uint8_t addend1, uint8_t 
 
 void perform_8bit_sub(virtual_cpu *cpu, uint8_t *dest, uint8_t minuend, uint8_t subtrahend)
 {
-    int cpu_difference = minuend - subtrahend;
+    uint8_t cpu_difference = minuend - subtrahend;
+
+    if (cpu_difference == 0)
+    {
+        set_flag(cpu, FLAG_ZERO);
+    }
+
+    if (subtrahend > minuend)
+    {
+        set_flag(cpu, FLAG_CARRY);
+    }
+
+    set_flag(cpu, FLAG_SUBTRACTION);
+
+    *dest = cpu_difference;
+}
+
+void perform_16bit_add(virtual_cpu *cpu, uint16_t *dest, uint16_t addend1, uint16_t addend2)
+{
+    uint16_t cpu_sum = addend1 + addend2;
+
+    if (cpu_sum == 0)
+    {
+        set_flag(cpu, FLAG_ZERO);
+    }
+
+    if (cpu_sum < addend1)
+    {
+        set_flag(cpu, FLAG_CARRY);
+    }
+
+    *dest = cpu_sum;
+}
+
+void perform_16bit_sub(virtual_cpu *cpu, uint16_t *dest, uint16_t minuend, uint16_t subtrahend)
+{
+    uint16_t cpu_difference = minuend - subtrahend;
 
     if (cpu_difference == 0)
     {
@@ -129,21 +168,21 @@ void inc_r16(virtual_cpu *cpu, uint8_t opcode)
 {
     uint8_t r16_id = (opcode & 0b110000) >> 4;
     uint16_t *r16 = get_r16(cpu, r16_id);
-    (*r16)++;
+    perform_16bit_add(cpu, r16, *r16, 1);
 }
 
 void dec_r16(virtual_cpu *cpu, uint8_t opcode)
 {
     uint8_t r16_id = (opcode & 0b110000) >> 4;
     uint16_t *r16 = get_r16(cpu, r16_id);
-    (*r16)--;
+    perform_16bit_sub(cpu, r16, *r16, 1);
 }
 
 void add_hl_r16(virtual_cpu *cpu, uint8_t opcode)
 {
     uint8_t r16_id = (opcode & 0b110000) >> 4;
     uint16_t r16 = *get_r16(cpu, r16_id);
-    cpu->hl += r16;
+    perform_16bit_add(cpu, &(cpu->hl), cpu->hl, r16);
 }
 
 const Instruction block_zero_instructions[] =
@@ -218,7 +257,8 @@ void execute_block_zero_instruction(virtual_cpu *cpu, uint8_t opcode)
 
 void execute_block_one_instruction(virtual_cpu *cpu, uint8_t opcode)
 {
-    (void)cpu;
+    // subtraction flag is only used by daa instruction in block zero, so we can clear it here
+    clear_flag(cpu, FLAG_SUBTRACTION);
     (void)opcode;
     printf("block one instructions not implemented\n");
 }
@@ -240,6 +280,9 @@ const uint8_t BLOCK_TWO_3BIT_OPCODE_CP_A_R8 = 7;
 
 void execute_block_two_instruction(virtual_cpu *cpu, uint8_t opcode)
 {
+    // subtraction flag is only used by daa instruction in block zero, so we can clear it here
+    clear_flag(cpu, FLAG_SUBTRACTION);
+
     uint8_t r8_id = opcode & 0b111;
     uint8_t r8 = *get_r8(cpu, r8_id);
     uint8_t *a = get_r8(cpu, R8_ID_A);
@@ -274,7 +317,8 @@ void execute_block_two_instruction(virtual_cpu *cpu, uint8_t opcode)
 
 void execute_block_three_instruction(virtual_cpu *cpu, uint8_t opcode)
 {
-    (void)cpu;
+    // subtraction flag is only used by daa instruction in block zero, so we can clear it here
+    clear_flag(cpu, FLAG_SUBTRACTION);
     (void)opcode;
     printf("block three instructions not implemented\n");
 }
