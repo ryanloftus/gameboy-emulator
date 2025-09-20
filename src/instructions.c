@@ -51,7 +51,7 @@ uint16_t* get_r16(virtual_cpu *cpu, uint8_t r16_id)
 
 const uint8_t FLAG_CARRY = 4;
 const uint8_t FLAG_HALF_CARRY = 5; // TODO
-const uint8_t FLAG_SUBTRACTION = 6;
+const uint8_t FLAG_SUBTRACTION = 6; // TODO: clear zero flag on non-subtraction block 0 instr
 const uint8_t FLAG_ZERO = 7;
 
 uint8_t get_flag(virtual_cpu *cpu, uint8_t flag)
@@ -207,7 +207,7 @@ void perform_8bit_or(virtual_cpu *cpu, uint8_t *dest, uint8_t operand1, uint8_t 
  * ----------------------------------------------------------------
  */
 
-void noop(virtual_cpu *cpu, uint8_t opcode)
+void nop(virtual_cpu *cpu, uint8_t opcode)
 {
     (void)cpu;
     (void)opcode;
@@ -255,7 +255,7 @@ const Instruction block_zero_instructions[] =
         0b000000,
         1,
         1,
-        noop
+        nop
     },
     {
         0b000111,
