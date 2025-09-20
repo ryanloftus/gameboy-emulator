@@ -8,6 +8,8 @@ Run `make` to build the release version.
 
 Run `make BUILD=debug` to build the debug version.
 
+Note that this implementation assumes a little endian system.
+
 ## Testing
 
 Run tests with `test.sh`.

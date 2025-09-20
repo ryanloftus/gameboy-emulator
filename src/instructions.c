@@ -11,28 +11,23 @@ const uint8_t R8_ID_H = 4;
 const uint8_t R8_ID_L = 5;
 const uint8_t R8_ID_MEM_HL = 6;
 const uint8_t R8_ID_A = 7;
+const uint8_t R8_ID_F = 8;
 
 uint8_t* get_r8(virtual_cpu *cpu, uint8_t r8_id)
 {
     switch (r8_id)
     {
-        case R8_ID_B:
-            return (uint8_t*)&(cpu->bc);
-        case R8_ID_C:
-            return (uint8_t*)&(cpu->bc) + 1;
-        case R8_ID_D:
-            return (uint8_t*)&(cpu->de);
-        case R8_ID_E:
-            return (uint8_t*)&(cpu->de) + 1;
-        case R8_ID_H:
-            return (uint8_t*)&(cpu->hl);
-        case R8_ID_L:
-            return (uint8_t*)&(cpu->hl) + 1;
+        case R8_ID_B: return &(cpu->b);
+        case R8_ID_C: return &(cpu->c);
+        case R8_ID_D: return &(cpu->d);
+        case R8_ID_E: return &(cpu->e);
+        case R8_ID_H: return &(cpu->h);
+        case R8_ID_L: return &(cpu->l);
+        case R8_ID_A: return &(cpu->a);
+        case R8_ID_F: return &(cpu->f);
         case R8_ID_MEM_HL:
             // TODO: update this when memory is implemented
             debug_assert(0);
-        case R8_ID_A:
-            return (uint8_t*)&(cpu->af);
         default:
             debug_assert(0);
     }
@@ -44,19 +39,65 @@ uint16_t* get_r16(virtual_cpu *cpu, uint8_t r16_id)
 {
     switch (r16_id)
     {
-        case 0:
-            return &(cpu->bc);
-        case 1:
-            return &(cpu->de);
-        case 2:
-            return &(cpu->hl);
-        case 3:
-            return &(cpu->sp);
-        case 4:
-            debug_assert(0);
+        case 0: return &(cpu->bc);
+        case 1: return &(cpu->de);
+        case 2: return &(cpu->hl);
+        case 3: return &(cpu->sp);
+        default: debug_assert(0);
     }
 
     return NULL;
+}
+
+const uint8_t FLAG_CARRY = 4;
+const uint8_t FLAG_HALF_CARRY = 5; // TODO
+const uint8_t FLAG_SUBTRACTION = 6;
+const uint8_t FLAG_ZERO = 7;
+
+void set_flag(virtual_cpu *cpu, uint8_t flag)
+{
+    debug_assert(flag >= 4 && flag <= 7);
+    cpu->f |= (1 << flag);
+    printf("set %d\n", flag);
+}
+
+void perform_8bit_add(virtual_cpu *cpu, uint8_t *dest, uint8_t addend1, uint8_t addend2)
+{
+    uint32_t x = (uint32_t)addend1;
+    uint32_t y = (uint32_t)addend2;
+    uint32_t arithmetic_sum = x + y;
+    uint8_t cpu_sum = addend1 + addend2;
+
+    if (cpu_sum == 0)
+    {
+        set_flag(cpu, FLAG_ZERO);
+    }
+
+    if (arithmetic_sum > cpu_sum)
+    {
+        set_flag(cpu, FLAG_CARRY);
+    }
+
+    *dest = cpu_sum;
+}
+
+void perform_8bit_sub(virtual_cpu *cpu, uint8_t *dest, uint8_t minuend, uint8_t subtrahend)
+{
+    int cpu_difference = minuend - subtrahend;
+
+    if (cpu_difference == 0)
+    {
+        set_flag(cpu, FLAG_ZERO);
+    }
+
+    if (subtrahend > minuend)
+    {
+        set_flag(cpu, FLAG_CARRY);
+    }
+
+    set_flag(cpu, FLAG_SUBTRACTION);
+
+    *dest = cpu_difference;
 }
 
 /*
@@ -75,14 +116,14 @@ void inc_r8(virtual_cpu *cpu, uint8_t opcode)
 {
     uint8_t r8_id = (opcode & 0b111000) >> 3;
     uint8_t *r8 = get_r8(cpu, r8_id);
-    (*r8)++;
+    perform_8bit_add(cpu, r8, *r8, 1);
 }
 
 void dec_r8(virtual_cpu *cpu, uint8_t opcode)
 {
     uint8_t r8_id = (opcode & 0b111000) >> 3;
     uint8_t *r8 = get_r8(cpu, r8_id);
-    (*r8)--;
+    perform_8bit_sub(cpu, r8, *r8, 1);
 }
 
 void inc_r16(virtual_cpu *cpu, uint8_t opcode)

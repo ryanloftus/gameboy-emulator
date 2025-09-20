@@ -13,3 +13,4 @@ CMakeUserPresets.json
 *.o
 *.d
 run_tests
+gbemu
