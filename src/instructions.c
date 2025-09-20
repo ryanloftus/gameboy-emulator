@@ -54,6 +54,12 @@ const uint8_t FLAG_HALF_CARRY = 5; // TODO
 const uint8_t FLAG_SUBTRACTION = 6;
 const uint8_t FLAG_ZERO = 7;
 
+uint8_t get_flag(virtual_cpu *cpu, uint8_t flag)
+{
+    debug_assert(flag >= 4 && flag <= 7);
+    return (cpu->f & (1 << flag)) >> flag;
+}
+
 void set_flag(virtual_cpu *cpu, uint8_t flag)
 {
     debug_assert(flag >= 4 && flag <= 7);
@@ -80,7 +86,10 @@ void perform_8bit_add(virtual_cpu *cpu, uint8_t *dest, uint8_t addend1, uint8_t 
         set_flag(cpu, FLAG_CARRY);
     }
 
-    *dest = cpu_sum;
+    if (dest != NULL)
+    {
+        *dest = cpu_sum;
+    }
 }
 
 void perform_8bit_sub(virtual_cpu *cpu, uint8_t *dest, uint8_t minuend, uint8_t subtrahend)
@@ -99,7 +108,10 @@ void perform_8bit_sub(virtual_cpu *cpu, uint8_t *dest, uint8_t minuend, uint8_t 
 
     set_flag(cpu, FLAG_SUBTRACTION);
 
-    *dest = cpu_difference;
+    if (dest != NULL)
+    {
+        *dest = cpu_difference;
+    }
 }
 
 void perform_16bit_add(virtual_cpu *cpu, uint16_t *dest, uint16_t addend1, uint16_t addend2)
@@ -116,7 +128,10 @@ void perform_16bit_add(virtual_cpu *cpu, uint16_t *dest, uint16_t addend1, uint1
         set_flag(cpu, FLAG_CARRY);
     }
 
-    *dest = cpu_sum;
+    if (dest != NULL)
+    {
+        *dest = cpu_sum;
+    }
 }
 
 void perform_16bit_sub(virtual_cpu *cpu, uint16_t *dest, uint16_t minuend, uint16_t subtrahend)
@@ -135,7 +150,55 @@ void perform_16bit_sub(virtual_cpu *cpu, uint16_t *dest, uint16_t minuend, uint1
 
     set_flag(cpu, FLAG_SUBTRACTION);
 
-    *dest = cpu_difference;
+    if (dest != NULL)
+    {
+        *dest = cpu_difference;
+    }
+}
+
+void perform_8bit_and(virtual_cpu *cpu, uint8_t *dest, uint8_t operand1, uint8_t operand2)
+{
+    uint8_t result = operand1 & operand2;
+
+    if (result == 0)
+    {
+        set_flag(cpu, FLAG_ZERO);
+    }
+
+    if (dest != NULL)
+    {
+        *dest = result;
+    }
+}
+
+void perform_8bit_xor(virtual_cpu *cpu, uint8_t *dest, uint8_t operand1, uint8_t operand2)
+{
+    uint8_t result = operand1 ^ operand2;
+
+    if (result == 0)
+    {
+        set_flag(cpu, FLAG_ZERO);
+    }
+
+    if (dest != NULL)
+    {
+        *dest = result;
+    }
+}
+
+void perform_8bit_or(virtual_cpu *cpu, uint8_t *dest, uint8_t operand1, uint8_t operand2)
+{
+    uint8_t result = operand1 | operand2;
+
+    if (result == 0)
+    {
+        set_flag(cpu, FLAG_ZERO);
+    }
+
+    if (dest != NULL)
+    {
+        *dest = result;
+    }
 }
 
 /*
@@ -285,22 +348,35 @@ void execute_block_two_instruction(virtual_cpu *cpu, uint8_t opcode)
 
     uint8_t r8_id = opcode & 0b111;
     uint8_t r8 = *get_r8(cpu, r8_id);
-    uint8_t *a = get_r8(cpu, R8_ID_A);
+    uint8_t *a = &(cpu->a);
 
     uint8_t three_bit_opcode = (opcode >> 3) & 0b111;
 
     switch (three_bit_opcode)
     {
         case BLOCK_TWO_3BIT_OPCODE_ADD_A_R8:
-            *a += r8;
+            perform_8bit_add(cpu, a, *a, r8);
             break;
         case BLOCK_TWO_3BIT_OPCODE_ADC_A_R8:
-            // TODO: implement carry bit functionality
-            printf("unimplemented adc a r8");
+            perform_8bit_add(cpu, a, *a, r8 + get_flag(cpu, FLAG_CARRY));
             break;
         case BLOCK_TWO_3BIT_OPCODE_SUB_A_R8:
-            *a -= r8;
+            perform_8bit_sub(cpu, a, *a, r8);
             break;
+        case BLOCK_TWO_3BIT_OPCODE_SBC_A_R8:
+            perform_8bit_sub(cpu, a, *a, r8 + get_flag(cpu, FLAG_CARRY));
+            break;
+        case BLOCK_TWO_3BIT_OPCODE_AND_A_R8:
+            perform_8bit_and(cpu, a, *a, r8);
+            break;
+        case BLOCK_TWO_3BIT_OPCODE_XOR_A_R8:
+            perform_8bit_xor(cpu, a, *a, r8);
+            break;
+        case BLOCK_TWO_3BIT_OPCODE_OR_A_R8:
+            perform_8bit_or(cpu, a, *a, r8);
+            break;
+        case BLOCK_TWO_3BIT_OPCODE_CP_A_R8:
+            perform_8bit_sub(cpu, NULL, *a, r8);
         default:
             printf("unimplemented block two instruction");
             break;
