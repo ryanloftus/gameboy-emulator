@@ -1,7 +1,7 @@
 # Compiler and flags
 CC       = clang
-CFLAGS   = -Wall -Wextra -std=c11 -Iinclude `sdl2-config --cflags`
-LDFLAGS  = `sdl2-config --libs`
+CFLAGS   = -Wall -Wextra -std=c11 -Iinclude $(shell sdl2-config --cflags)
+LDFLAGS  = $(shell sdl2-config --libs)
 
 # Build type: default to release
 BUILD    ?= release
