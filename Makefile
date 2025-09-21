@@ -20,7 +20,7 @@ SRCS     = $(wildcard $(SRC_DIR)/*.c)
 OBJS     = $(SRCS:.c=.o)
 
 # Output binary
-TARGET   = gbemu
+TARGET   = gameboy
 
 # Testing
 TEST_DIR = tests
@@ -49,7 +49,7 @@ tests: $(TEST_OBJS) $(filter-out $(SRC_DIR)/main.o, $(OBJS))
 
 # Clean build artifacts
 clean:
-	rm -f $(SRC_DIR)/*.o $(TARGET)
+	rm -f $(SRC_DIR)/*.o $(TARGET) $(TEST_DIR)/*.o $(TEST_BIN)
 
 # Full rebuild
 rebuild: clean all

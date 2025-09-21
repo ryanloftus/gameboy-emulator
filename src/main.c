@@ -35,7 +35,7 @@ int main()
             if (event.type == SDL_QUIT) running = 0;
         }
 
-        render(mem.video_ram, frame_buffer, WIDTH, HEIGHT);
+        render(&mem, frame_buffer, WIDTH, HEIGHT);
         SDL_UpdateTexture(texture, NULL, frame_buffer, WIDTH * sizeof(uint32_t));
         SDL_RenderClear(renderer);
         SDL_RenderCopy(renderer, texture, NULL, NULL);
