@@ -22,11 +22,11 @@ int main()
         for (int x=0; x<WIDTH; x++)
             frame_buffer[y*WIDTH + x] = (x ^ y) * 0x010101FF; // test pattern
 
-    virtual_cpu cpu;
-    create_virtual_cpu(&cpu);
-
     memory mem;
     init_memory(&mem);
+
+    virtual_cpu cpu;
+    create_virtual_cpu(&cpu, &mem, NULL);
 
     int running = 1;
     SDL_Event event;

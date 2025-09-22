@@ -7,11 +7,11 @@
 int test_noop()
 {
     virtual_cpu cpu;
-    uint8_t code = 0;
+    uint8_t code[] = {0};
 
-    create_virtual_cpu(&cpu);
+    create_virtual_cpu(&cpu, NULL, code);
 
-    fetch_execute(&cpu, NULL, &code);
+    fetch_execute(&cpu);
 
     assert(cpu.af == 0);
     assert(cpu.bc == 0);
@@ -28,16 +28,16 @@ int test_inc_r8()
     virtual_cpu cpu;
     uint8_t code[] = {0b00001100, 0b00000100};
 
-    create_virtual_cpu(&cpu);
+    create_virtual_cpu(&cpu, NULL, code);
 
-    fetch_execute(&cpu, NULL, code);
+    fetch_execute(&cpu);
 
     assert(cpu.b == 0);
     assert(cpu.c == 1);
     assert(cpu.bc == 1);
     assert(cpu.pc == 1);
 
-    fetch_execute(&cpu, NULL, code);
+    fetch_execute(&cpu);
 
     assert(cpu.b == 1);
     assert(cpu.c == 1);
@@ -52,16 +52,16 @@ int test_dec_r8()
     virtual_cpu cpu;
     uint8_t code[] = {0b00001101, 0b00000101};
 
-    create_virtual_cpu(&cpu);
+    create_virtual_cpu(&cpu, NULL, code);
 
-    fetch_execute(&cpu, NULL, code);
+    fetch_execute(&cpu);
 
     assert(cpu.b == 0);
     assert(cpu.c == 0xff);
     assert(cpu.bc == 0x00ff);
     assert(cpu.pc == 1);
 
-    fetch_execute(&cpu, NULL, code);
+    fetch_execute(&cpu);
 
     assert(cpu.b == 0xff);
     assert(cpu.c == 0xff);
@@ -77,11 +77,11 @@ int test_dec_r8()
 int test_inc_r16()
 {
     virtual_cpu cpu;
-    uint8_t code = 0b100011;
+    uint8_t code[] = {0b100011};
 
-    create_virtual_cpu(&cpu);
+    create_virtual_cpu(&cpu, NULL, code);
 
-    fetch_execute(&cpu, NULL, &code);
+    fetch_execute(&cpu);
 
     assert(cpu.hl == 1);
     assert(cpu.pc == 1);
@@ -92,11 +92,11 @@ int test_inc_r16()
 int test_dec_r16()
 {
     virtual_cpu cpu;
-    uint8_t code = 0b101011;
+    uint8_t code[] = {0b101011};
 
-    create_virtual_cpu(&cpu);
+    create_virtual_cpu(&cpu, NULL, code);
 
-    fetch_execute(&cpu, NULL, &code);
+    fetch_execute(&cpu);
 
     assert(cpu.hl == 0b1111111111111111);
     assert(cpu.pc == 1);
@@ -107,12 +107,12 @@ int test_dec_r16()
 int test_add_hl_r16()
 {
     virtual_cpu cpu;
-    uint8_t code = 0b011001;
+    uint8_t code[] = {0b011001};
 
-    create_virtual_cpu(&cpu);
+    create_virtual_cpu(&cpu, NULL, code);
     cpu.de = 31;
 
-    fetch_execute(&cpu, NULL, &code);
+    fetch_execute(&cpu);
 
     assert(cpu.hl == 31);
     assert(cpu.pc == 1);
@@ -125,14 +125,14 @@ int test_zero_flag()
     virtual_cpu cpu;
     uint8_t code[] = {0b00001100, 0b00001101};
 
-    create_virtual_cpu(&cpu);
+    create_virtual_cpu(&cpu, NULL, code);
 
-    fetch_execute(&cpu, NULL, code);
+    fetch_execute(&cpu);
 
     assert(cpu.f == 0);
     assert(cpu.c == 1);
     
-    fetch_execute(&cpu, NULL, code);
+    fetch_execute(&cpu);
     
     uint8_t zero_flag = cpu.f >> 7;
     assert(cpu.c == 0);
