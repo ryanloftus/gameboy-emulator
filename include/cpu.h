@@ -1,6 +1,8 @@
 #ifndef _CPU_H_
 #define _CPU_H_
 
+#include "mmu.h"
+
 #include <stdint.h>
 
 typedef struct virtual_cpu
@@ -32,6 +34,6 @@ typedef struct virtual_cpu
 } virtual_cpu;
 
 void create_virtual_cpu(virtual_cpu *cpu);
-void fetch_execute(virtual_cpu *cpu, uint8_t *code);
+void fetch_execute(virtual_cpu *cpu, memory *mem, uint8_t *code);
 
 #endif

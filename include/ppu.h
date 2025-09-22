@@ -1,7 +1,7 @@
 #ifndef _PPU_H_
 #define _PPU_H_
 
-#include "memory.h"
+#include "mmu.h"
 
 #include <SDL.h>
 #include <stdint.h>

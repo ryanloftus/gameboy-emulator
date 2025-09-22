@@ -22,7 +22,7 @@
 #define IO_REGISTERS_START 0xFF00
 #define HIGH_RAM_START 0xFF80
 
-typedef struct
+typedef struct memory
 {
     union
     {

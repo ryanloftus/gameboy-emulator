@@ -11,7 +11,7 @@ int test_noop()
 
     create_virtual_cpu(&cpu);
 
-    fetch_execute(&cpu, &code);
+    fetch_execute(&cpu, NULL, &code);
 
     assert(cpu.af == 0);
     assert(cpu.bc == 0);
@@ -30,14 +30,14 @@ int test_inc_r8()
 
     create_virtual_cpu(&cpu);
 
-    fetch_execute(&cpu, code);
+    fetch_execute(&cpu, NULL, code);
 
     assert(cpu.b == 0);
     assert(cpu.c == 1);
     assert(cpu.bc == 1);
     assert(cpu.pc == 1);
 
-    fetch_execute(&cpu, code);
+    fetch_execute(&cpu, NULL, code);
 
     assert(cpu.b == 1);
     assert(cpu.c == 1);
@@ -54,14 +54,14 @@ int test_dec_r8()
 
     create_virtual_cpu(&cpu);
 
-    fetch_execute(&cpu, code);
+    fetch_execute(&cpu, NULL, code);
 
     assert(cpu.b == 0);
     assert(cpu.c == 0xff);
     assert(cpu.bc == 0x00ff);
     assert(cpu.pc == 1);
 
-    fetch_execute(&cpu, code);
+    fetch_execute(&cpu, NULL, code);
 
     assert(cpu.b == 0xff);
     assert(cpu.c == 0xff);
@@ -81,7 +81,7 @@ int test_inc_r16()
 
     create_virtual_cpu(&cpu);
 
-    fetch_execute(&cpu, &code);
+    fetch_execute(&cpu, NULL, &code);
 
     assert(cpu.hl == 1);
     assert(cpu.pc == 1);
@@ -96,7 +96,7 @@ int test_dec_r16()
 
     create_virtual_cpu(&cpu);
 
-    fetch_execute(&cpu, &code);
+    fetch_execute(&cpu, NULL, &code);
 
     assert(cpu.hl == 0b1111111111111111);
     assert(cpu.pc == 1);
@@ -112,7 +112,7 @@ int test_add_hl_r16()
     create_virtual_cpu(&cpu);
     cpu.de = 31;
 
-    fetch_execute(&cpu, &code);
+    fetch_execute(&cpu, NULL, &code);
 
     assert(cpu.hl == 31);
     assert(cpu.pc == 1);
@@ -127,12 +127,12 @@ int test_zero_flag()
 
     create_virtual_cpu(&cpu);
 
-    fetch_execute(&cpu, code);
+    fetch_execute(&cpu, NULL, code);
 
     assert(cpu.f == 0);
     assert(cpu.c == 1);
     
-    fetch_execute(&cpu, code);
+    fetch_execute(&cpu, NULL, code);
     
     uint8_t zero_flag = cpu.f >> 7;
     assert(cpu.c == 0);

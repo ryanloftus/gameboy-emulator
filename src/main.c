@@ -1,5 +1,5 @@
 #include "ppu.h"
-#include "memory.h"
+#include "mmu.h"
 #include "cpu.h"
 
 #include <SDL.h>
