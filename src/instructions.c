@@ -247,7 +247,100 @@ void add_hl_r16(virtual_cpu *cpu, uint8_t opcode)
 
 void ld_r16_imm16(virtual_cpu *cpu, uint8_t opcode)
 {
+    uint16_t *r16 = get_r16(cpu, (opcode >> 4) & 0b11);
+    uint16_t imm16 = cpu->code[cpu->pc + 1] | (cpu->code[cpu->pc + 2] << 8);
+    *r16 = imm16;
+}
 
+void ld_r8_imm8(virtual_cpu *cpu, uint8_t opcode)
+{
+    uint16_t *r8 = get_r8(cpu, (opcode >> 3) & 0b111);
+    uint16_t imm8 = cpu->code[cpu->pc + 1];
+    *r8 = imm8;
+}
+
+void ld_r16mem_a(virtual_cpu *cpu, uint8_t opcode)
+{
+    //TODO
+    printf("not implemented\n");
+}
+
+void ld_a_r16mem(virtual_cpu *cpu, uint8_t opcode)
+{
+    //TODO
+    printf("not implemented\n");
+}
+
+void ld_imm16_sp(virtual_cpu *cpu, uint8_t opcode)
+{
+    //TODO
+    printf("not implemented\n");
+}
+
+void rlca(virtual_cpu *cpu, uint8_t opcode)
+{
+    //TODO
+    printf("not implemented\n");
+}
+
+void rrca(virtual_cpu *cpu, uint8_t opcode)
+{
+    //TODO
+    printf("not implemented\n");
+}
+
+void rla(virtual_cpu *cpu, uint8_t opcode)
+{
+    //TODO
+    printf("not implemented\n");
+}
+
+void rra(virtual_cpu *cpu, uint8_t opcode)
+{
+    //TODO
+    printf("not implemented\n");
+}
+
+void daa(virtual_cpu *cpu, uint8_t opcode)
+{
+    //TODO
+    printf("not implemented\n");
+}
+
+void cpl(virtual_cpu *cpu, uint8_t opcode)
+{
+    //TODO
+    printf("not implemented\n");
+}
+
+void scf(virtual_cpu *cpu, uint8_t opcode)
+{
+    //TODO
+    printf("not implemented\n");
+}
+
+void ccf(virtual_cpu *cpu, uint8_t opcode)
+{
+    //TODO
+    printf("not implemented\n");
+}
+
+void jr_imm8(virtual_cpu *cpu, uint8_t opcode)
+{
+    //TODO
+    printf("not implemented\n");
+}
+
+void jr_cond_imm8(virtual_cpu *cpu, uint8_t opcode)
+{
+    //TODO
+    printf("not implemented\n");
+}
+
+void stop(virtual_cpu *cpu, uint8_t opcode)
+{
+    //TODO
+    printf("not implemented\n");
 }
 
 const instruction block_zero_instructions[] =
@@ -293,6 +386,20 @@ const instruction block_zero_instructions[] =
         1,
         1,
         add_hl_r16
+    },
+    {
+        0b001111,
+        0b000001,
+        3,
+        3,
+        ld_r16_imm16
+    },
+    {
+        0b000111,
+        0b000110,
+        2,
+        2,
+        ld_r8_imm8
     }
 };
 

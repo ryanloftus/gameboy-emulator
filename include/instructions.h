@@ -6,7 +6,7 @@
 
 #include "cpu.h"
 
-typedef struct
+typedef struct instruction
 {
     uint8_t bitmask;
     uint8_t pattern;
