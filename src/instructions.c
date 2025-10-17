@@ -353,8 +353,48 @@ void rra(virtual_cpu *cpu, uint8_t opcode)
 
 void daa(virtual_cpu *cpu, uint8_t opcode)
 {
-    //TODO
-    printf("not implemented\n");
+    uint8_t *a = get_r8(cpu, R8_ID_A);
+    uint8_t adjustment = 0;
+    if (get_flag(cpu, FLAG_SUBTRACTION))
+    {
+        if (get_flag(cpu, FLAG_HALF_CARRY))
+        {
+            adjustment += 0x6;
+        }
+        if (get_flag(cpu, FLAG_CARRY))
+        {
+            adjustment += 0x60;
+        }
+        *a -= adjustment;
+        clear_flag(cpu, FLAG_CARRY);
+    }
+    else
+    {
+        if (get_flag(cpu, FLAG_HALF_CARRY) || ((*a) & 0xf) > 0x9)
+        {
+            adjustment += 0x6;
+        }
+        if (get_flag(cpu, FLAG_CARRY) || (*a) > 0x99)
+        {
+            adjustment += 0x60;
+            set_flag(cpu, FLAG_CARRY);
+        }
+        else
+        {
+            clear_flag(cpu, FLAG_CARRY);
+        }
+        *a += adjustment;
+    }
+
+    if ((*a) == 0)
+    {
+        set_flag(cpu, FLAG_ZERO);
+    }
+    else
+    {
+        clear_flag(cpu, FLAG_ZERO);
+    }
+    clear_flag(cpu, FLAG_HALF_CARRY);
 }
 
 void cpl(virtual_cpu *cpu, uint8_t opcode)
@@ -510,6 +550,13 @@ const instruction block_zero_instructions[] =
         1,
         1,
         ccf
+    },
+    {
+        0b111111,
+        0b100111,
+        1,
+        1,
+        daa
     }
 };
 
