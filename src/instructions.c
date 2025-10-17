@@ -279,26 +279,76 @@ void ld_imm16_sp(virtual_cpu *cpu, uint8_t opcode)
 
 void rlca(virtual_cpu *cpu, uint8_t opcode)
 {
-    //TODO
-    printf("not implemented\n");
+    uint8_t *a = get_r8(cpu, R8_ID_A);
+    if ((*a) & (1 << 7))
+    {
+        set_flag(cpu, FLAG_CARRY);
+    }
+    else
+    {
+        clear_flag(cpu, FLAG_CARRY);
+    }
+    *a = ((*a) << 1) | get_flag(cpu, FLAG_CARRY);
+
+    clear_flag(cpu, FLAG_ZERO);
+    clear_flag(cpu, FLAG_HALF_CARRY);
+    clear_flag(cpu, FLAG_SUBTRACTION);
 }
 
 void rrca(virtual_cpu *cpu, uint8_t opcode)
 {
-    //TODO
-    printf("not implemented\n");
+    uint8_t *a = get_r8(cpu, R8_ID_A);
+    if ((*a) & 1)
+    {
+        set_flag(cpu, FLAG_CARRY);
+    }
+    else
+    {
+        clear_flag(cpu, FLAG_CARRY);
+    }
+    *a = ((*a) >> 1) | (get_flag(cpu, FLAG_CARRY) << 7);
+
+    clear_flag(cpu, FLAG_ZERO);
+    clear_flag(cpu, FLAG_HALF_CARRY);
+    clear_flag(cpu, FLAG_SUBTRACTION);
 }
 
 void rla(virtual_cpu *cpu, uint8_t opcode)
 {
-    //TODO
-    printf("not implemented\n");
+    uint8_t *a = get_r8(cpu, R8_ID_A);
+    uint8_t a_val = *a;
+    *a = (a_val << 1) | get_flag(cpu, FLAG_CARRY);
+    if (a_val & (1 << 7))
+    {
+        set_flag(cpu, FLAG_CARRY);
+    }
+    else
+    {
+        clear_flag(cpu, FLAG_CARRY);
+    }
+
+    clear_flag(cpu, FLAG_ZERO);
+    clear_flag(cpu, FLAG_HALF_CARRY);
+    clear_flag(cpu, FLAG_SUBTRACTION);
 }
 
 void rra(virtual_cpu *cpu, uint8_t opcode)
 {
-    //TODO
-    printf("not implemented\n");
+    uint8_t *a = get_r8(cpu, R8_ID_A);
+    uint8_t a_val = *a;
+    *a = (a_val >> 1) | (get_flag(cpu, FLAG_CARRY) << 7);
+    if (a_val & 1)
+    {
+        set_flag(cpu, FLAG_CARRY);
+    }
+    else
+    {
+        clear_flag(cpu, FLAG_CARRY);
+    }
+
+    clear_flag(cpu, FLAG_ZERO);
+    clear_flag(cpu, FLAG_HALF_CARRY);
+    clear_flag(cpu, FLAG_SUBTRACTION);
 }
 
 void daa(virtual_cpu *cpu, uint8_t opcode)
@@ -400,6 +450,34 @@ const instruction block_zero_instructions[] =
         2,
         2,
         ld_r8_imm8
+    },
+    {
+        0b111111,
+        0b000111,
+        1,
+        1,
+        rlca
+    },
+    {
+        0b111111,
+        0b001111,
+        1,
+        1,
+        rrca
+    },
+    {
+        0b111111,
+        0b010111,
+        1,
+        1,
+        rla
+    },
+    {
+        0b111111,
+        0b011111,
+        1,
+        1,
+        rra
     }
 };
 
@@ -500,8 +578,9 @@ void execute_block_two_instruction(virtual_cpu *cpu, uint8_t opcode)
             break;
         case BLOCK_TWO_3BIT_OPCODE_CP_A_R8:
             perform_8bit_sub(cpu, NULL, *a, r8);
+            break;
         default:
-            printf("unimplemented block two instruction");
+            printf("invalid block two instruction");
             break;
     }
 
