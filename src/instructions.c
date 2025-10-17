@@ -359,20 +359,31 @@ void daa(virtual_cpu *cpu, uint8_t opcode)
 
 void cpl(virtual_cpu *cpu, uint8_t opcode)
 {
-    //TODO
-    printf("not implemented\n");
+    uint8_t *a = get_r8(cpu, R8_ID_A);
+    *a = ~(*a);
+    set_flag(cpu, FLAG_SUBTRACTION);
+    set_flag(cpu, FLAG_HALF_CARRY);
 }
 
 void scf(virtual_cpu *cpu, uint8_t opcode)
 {
-    //TODO
-    printf("not implemented\n");
+    set_flag(cpu, FLAG_CARRY);
+    clear_flag(cpu, FLAG_SUBTRACTION);
+    clear_flag(cpu, FLAG_HALF_CARRY);
 }
 
 void ccf(virtual_cpu *cpu, uint8_t opcode)
 {
-    //TODO
-    printf("not implemented\n");
+    if (get_flag(cpu, FLAG_CARRY))
+    {
+        clear_flag(cpu, FLAG_CARRY);
+    }
+    else
+    {
+        set_flag(cpu, FLAG_CARRY);
+    }
+    clear_flag(cpu, FLAG_SUBTRACTION);
+    clear_flag(cpu, FLAG_HALF_CARRY);
 }
 
 void jr_imm8(virtual_cpu *cpu, uint8_t opcode)
@@ -478,6 +489,27 @@ const instruction block_zero_instructions[] =
         1,
         1,
         rra
+    },
+    {
+        0b111111,
+        0b101111,
+        1,
+        1,
+        cpl
+    },
+    {
+        0b111111,
+        0b110111,
+        1,
+        1,
+        scf
+    },
+    {
+        0b111111,
+        0b111111,
+        1,
+        1,
+        ccf
     }
 };
 
