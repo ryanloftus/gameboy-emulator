@@ -10,6 +10,7 @@ CTestTestfile.cmake
 _deps
 CMakeUserPresets.json
 .vscode
+.cache
 
 *.o
 *.d

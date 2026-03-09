@@ -1,10 +1,12 @@
+#include "unity.h"
 #include "cpu.h"
-#include "testing_utils.h"
 
-#include <stdio.h>
-#include <memory.h>
+#include <stdint.h>
 
-int test_noop()
+void setUp(void) {}
+void tearDown(void) {}
+
+void test_noop(void)
 {
     virtual_cpu cpu;
     uint8_t code[] = {0};
@@ -13,17 +15,15 @@ int test_noop()
 
     fetch_execute(&cpu);
 
-    assert(cpu.af == 0);
-    assert(cpu.bc == 0);
-    assert(cpu.de == 0);
-    assert(cpu.hl == 0);
-    assert(cpu.sp == 0);
-    assert(cpu.pc == 1);
-
-    return PASSED;
+    TEST_ASSERT_EQUAL_UINT16(0, cpu.af);
+    TEST_ASSERT_EQUAL_UINT16(0, cpu.bc);
+    TEST_ASSERT_EQUAL_UINT16(0, cpu.de);
+    TEST_ASSERT_EQUAL_UINT16(0, cpu.hl);
+    TEST_ASSERT_EQUAL_UINT16(0, cpu.sp);
+    TEST_ASSERT_EQUAL_UINT16(1, cpu.pc);
 }
 
-int test_inc_r8()
+void test_inc_r8(void)
 {
     virtual_cpu cpu;
     uint8_t code[] = {0b00001100, 0b00000100};
@@ -32,22 +32,20 @@ int test_inc_r8()
 
     fetch_execute(&cpu);
 
-    assert(cpu.b == 0);
-    assert(cpu.c == 1);
-    assert(cpu.bc == 1);
-    assert(cpu.pc == 1);
+    TEST_ASSERT_EQUAL_UINT8(0, cpu.b);
+    TEST_ASSERT_EQUAL_UINT8(1, cpu.c);
+    TEST_ASSERT_EQUAL_UINT16(1, cpu.bc);
+    TEST_ASSERT_EQUAL_UINT16(1, cpu.pc);
 
     fetch_execute(&cpu);
 
-    assert(cpu.b == 1);
-    assert(cpu.c == 1);
-    assert(cpu.bc == (1 << 8) + 1);
-    assert(cpu.pc == 2);
-
-    return PASSED;
+    TEST_ASSERT_EQUAL_UINT8(1, cpu.b);
+    TEST_ASSERT_EQUAL_UINT8(1, cpu.c);
+    TEST_ASSERT_EQUAL_UINT16((1 << 8) + 1, cpu.bc);
+    TEST_ASSERT_EQUAL_UINT16(2, cpu.pc);
 }
 
-int test_dec_r8()
+void test_dec_r8(void)
 {
     virtual_cpu cpu;
     uint8_t code[] = {0b00001101, 0b00000101};
@@ -56,25 +54,23 @@ int test_dec_r8()
 
     fetch_execute(&cpu);
 
-    assert(cpu.b == 0);
-    assert(cpu.c == 0xff);
-    assert(cpu.bc == 0x00ff);
-    assert(cpu.pc == 1);
+    TEST_ASSERT_EQUAL_UINT8(0, cpu.b);
+    TEST_ASSERT_EQUAL_UINT8(0xff, cpu.c);
+    TEST_ASSERT_EQUAL_UINT16(0x00ff, cpu.bc);
+    TEST_ASSERT_EQUAL_UINT16(1, cpu.pc);
 
     fetch_execute(&cpu);
 
-    assert(cpu.b == 0xff);
-    assert(cpu.c == 0xff);
-    assert(cpu.bc == 0xffff);
-    assert(cpu.pc == 2);
-    
-    uint8_t subtraction_flag = (cpu.f >> 6) & 1;
-    assert(subtraction_flag == 1);
+    TEST_ASSERT_EQUAL_UINT8(0xff, cpu.b);
+    TEST_ASSERT_EQUAL_UINT8(0xff, cpu.c);
+    TEST_ASSERT_EQUAL_UINT16(0xffff, cpu.bc);
+    TEST_ASSERT_EQUAL_UINT16(2, cpu.pc);
 
-    return PASSED;
+    uint8_t subtraction_flag = (cpu.f >> 6) & 1;
+    TEST_ASSERT_EQUAL_UINT8(1, subtraction_flag);
 }
 
-int test_inc_r16()
+void test_inc_r16(void)
 {
     virtual_cpu cpu;
     uint8_t code[] = {0b100011};
@@ -83,13 +79,11 @@ int test_inc_r16()
 
     fetch_execute(&cpu);
 
-    assert(cpu.hl == 1);
-    assert(cpu.pc == 1);
-
-    return PASSED;
+    TEST_ASSERT_EQUAL_UINT16(1, cpu.hl);
+    TEST_ASSERT_EQUAL_UINT16(1, cpu.pc);
 }
 
-int test_dec_r16()
+void test_dec_r16(void)
 {
     virtual_cpu cpu;
     uint8_t code[] = {0b101011};
@@ -98,13 +92,11 @@ int test_dec_r16()
 
     fetch_execute(&cpu);
 
-    assert(cpu.hl == 0b1111111111111111);
-    assert(cpu.pc == 1);
-
-    return PASSED;
+    TEST_ASSERT_EQUAL_UINT16(0xFFFF, cpu.hl);
+    TEST_ASSERT_EQUAL_UINT16(1, cpu.pc);
 }
 
-int test_add_hl_r16()
+void test_add_hl_r16(void)
 {
     virtual_cpu cpu;
     uint8_t code[] = {0b011001};
@@ -114,13 +106,11 @@ int test_add_hl_r16()
 
     fetch_execute(&cpu);
 
-    assert(cpu.hl == 31);
-    assert(cpu.pc == 1);
-
-    return PASSED;
+    TEST_ASSERT_EQUAL_UINT16(31, cpu.hl);
+    TEST_ASSERT_EQUAL_UINT16(1, cpu.pc);
 }
 
-int test_zero_flag()
+void test_zero_flag(void)
 {
     virtual_cpu cpu;
     uint8_t code[] = {0b00001100, 0b00001101};
@@ -129,33 +119,25 @@ int test_zero_flag()
 
     fetch_execute(&cpu);
 
-    assert(cpu.f == 0);
-    assert(cpu.c == 1);
-    
-    fetch_execute(&cpu);
-    
-    uint8_t zero_flag = cpu.f >> 7;
-    assert(cpu.c == 0);
-    assert(zero_flag == 1);
+    TEST_ASSERT_EQUAL_UINT8(0, cpu.f);
+    TEST_ASSERT_EQUAL_UINT8(1, cpu.c);
 
-    return PASSED;
+    fetch_execute(&cpu);
+
+    uint8_t zero_flag = cpu.f >> 7;
+    TEST_ASSERT_EQUAL_UINT8(0, cpu.c);
+    TEST_ASSERT_EQUAL_UINT8(1, zero_flag);
 }
 
-int main()
+int main(void)
 {
-    int (*tests[])(void) =
-    {
-        test_noop,
-        test_inc_r8,
-        test_dec_r8,
-        test_inc_r16,
-        test_dec_r16,
-        test_add_hl_r16,
-        test_zero_flag
-    };
-    int num_tests = sizeof(tests) / sizeof(void*);
-
-    run_tests(tests, num_tests);
-
-    return 0;
+    UNITY_BEGIN();
+    RUN_TEST(test_noop);
+    RUN_TEST(test_inc_r8);
+    RUN_TEST(test_dec_r8);
+    RUN_TEST(test_inc_r16);
+    RUN_TEST(test_dec_r16);
+    RUN_TEST(test_add_hl_r16);
+    RUN_TEST(test_zero_flag);
+    return UNITY_END();
 }
