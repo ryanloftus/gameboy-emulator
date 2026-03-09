@@ -254,7 +254,7 @@ void ld_r16_imm16(virtual_cpu *cpu, uint8_t opcode)
 
 void ld_r8_imm8(virtual_cpu *cpu, uint8_t opcode)
 {
-    uint16_t *r8 = get_r8(cpu, (opcode >> 3) & 0b111);
+    uint8_t *r8 = get_r8(cpu, (opcode >> 3) & 0b111);
     uint16_t imm8 = cpu->code[cpu->pc + 1];
     *r8 = imm8;
 }
