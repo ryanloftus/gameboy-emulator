@@ -12,6 +12,7 @@ CMakeUserPresets.json
 .vscode
 .cache
 
+build/
 *.o
 *.d
 run_tests

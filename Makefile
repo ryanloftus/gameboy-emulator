@@ -14,21 +14,26 @@ else
     CFLAGS += -O2
 endif
 
+# Build output directory
+BUILD_DIR ?= build
+
 # Source files
 SRC_DIR  = src
 SRCS     = $(wildcard $(SRC_DIR)/*.c)
-OBJS     = $(SRCS:.c=.o)
+OBJS     = $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/$(SRC_DIR)/%.o,$(SRCS))
 
 # Output binary
 TARGET   = gameboy
 
 # Testing
 TEST_DIR   = tests
-TEST_SRCS  = $(wildcard $(TEST_DIR)/*.c)
-TEST_OBJS  = $(TEST_SRCS:.c=.o)
+TEST_SRCS  = $(filter-out $(TEST_DIR)/test_cpu_main.c, $(wildcard $(TEST_DIR)/*.c)) $(TEST_DIR)/test_cpu_main.c
+TEST_OBJS  = $(patsubst $(TEST_DIR)/%.c,$(BUILD_DIR)/$(TEST_DIR)/%.o,$(TEST_SRCS))
 TEST_BIN   = run_tests
 UNITY_DIR  = vendor/unity
-UNITY_OBJ  = $(UNITY_DIR)/unity.o
+UNITY_OBJ  = $(BUILD_DIR)/$(UNITY_DIR)/unity.o
+
+OBJ_DIRS = $(sort $(dir $(OBJS) $(TEST_OBJS) $(UNITY_OBJ)))
 
 # Test CFLAGS: same as CFLAGS but without SDL (tests don't need it)
 TEST_CFLAGS = -Wall -Wextra -std=c11 -Iinclude -I$(UNITY_DIR)
@@ -46,7 +51,7 @@ $(TARGET): $(OBJS)
 	$(CC) $(OBJS) -o $@ $(LDFLAGS)
 
 # Compile step
-$(SRC_DIR)/%.o: $(SRC_DIR)/%.c
+$(BUILD_DIR)/$(SRC_DIR)/%.o: $(SRC_DIR)/%.c | $(BUILD_DIR)/$(SRC_DIR)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 # Run the emulator (example usage: make run ROM=roms/pokemon_red.gb)
@@ -54,21 +59,25 @@ run: $(TARGET)
 	./$(TARGET) $(ROM)
 
 # Run tests
-tests: $(TEST_OBJS) $(UNITY_OBJ) $(filter-out $(SRC_DIR)/main.o, $(OBJS))
+tests: $(TEST_OBJS) $(UNITY_OBJ) $(filter-out $(BUILD_DIR)/$(SRC_DIR)/main.o, $(OBJS))
 	$(CC) -o $(TEST_BIN) $^ $(LDFLAGS)
 
-$(TEST_DIR)/%.o: $(TEST_DIR)/%.c
+$(BUILD_DIR)/$(TEST_DIR)/%.o: $(TEST_DIR)/%.c | $(BUILD_DIR)/$(TEST_DIR)
 	$(CC) $(TEST_CFLAGS) -c $< -o $@
 
-$(UNITY_DIR)/unity.o: $(UNITY_DIR)/unity.c
+$(BUILD_DIR)/$(UNITY_DIR)/unity.o: $(UNITY_DIR)/unity.c | $(BUILD_DIR)/$(UNITY_DIR)
 	$(CC) $(TEST_CFLAGS) -c $< -o $@
 
 test: tests
 	./$(TEST_BIN)
 
+$(OBJ_DIRS):
+	mkdir -p $@
+
 # Clean build artifacts
 clean:
-	rm -f $(SRC_DIR)/*.o $(TARGET) $(TEST_DIR)/*.o $(UNITY_DIR)/*.o $(TEST_BIN)
+	rm -rf $(BUILD_DIR)
+	rm -f $(SRC_DIR)/*.o $(TEST_DIR)/*.o $(UNITY_DIR)/*.o $(TARGET) $(TEST_BIN)
 
 # Full rebuild
 rebuild: clean all

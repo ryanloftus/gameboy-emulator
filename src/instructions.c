@@ -3,28 +3,32 @@
 
 #include <stdio.h>
 
-const uint8_t R8_ID_B = 0;
-const uint8_t R8_ID_C = 1;
-const uint8_t R8_ID_D = 2;
-const uint8_t R8_ID_E = 3;
-const uint8_t R8_ID_H = 4;
-const uint8_t R8_ID_L = 5;
-const uint8_t R8_ID_MEM_HL = 6;
-const uint8_t R8_ID_A = 7;
-const uint8_t R8_ID_F = 8;
+static const uint8_t R8_ID_B = 0;
+static const uint8_t R8_ID_C = 1;
+static const uint8_t R8_ID_D = 2;
+static const uint8_t R8_ID_E = 3;
+static const uint8_t R8_ID_H = 4;
+static const uint8_t R8_ID_L = 5;
+static const uint8_t R8_ID_MEM_HL = 6;
+static const uint8_t R8_ID_A = 7;
 
-uint8_t* get_r8(virtual_cpu *cpu, uint8_t r8_id)
+static const uint8_t F_MASK_Z = 0x80;
+static const uint8_t F_MASK_N = 0x40;
+static const uint8_t F_MASK_H = 0x20;
+static const uint8_t F_MASK_C = 0x10;
+static const uint8_t F_LOWER_NIBBLE = 0x0F;
+
+static uint8_t *get_r8(virtual_cpu *cpu, uint8_t r8_id)
 {
     switch (r8_id)
     {
-        case R8_ID_B: return &(cpu->b);
-        case R8_ID_C: return &(cpu->c);
-        case R8_ID_D: return &(cpu->d);
-        case R8_ID_E: return &(cpu->e);
-        case R8_ID_H: return &(cpu->h);
-        case R8_ID_L: return &(cpu->l);
-        case R8_ID_A: return &(cpu->a);
-        case R8_ID_F: return &(cpu->f);
+        case R8_ID_B: return &cpu->b;
+        case R8_ID_C: return &cpu->c;
+        case R8_ID_D: return &cpu->d;
+        case R8_ID_E: return &cpu->e;
+        case R8_ID_H: return &cpu->h;
+        case R8_ID_L: return &cpu->l;
+        case R8_ID_A: return &cpu->a;
         case R8_ID_MEM_HL: return access_memory8(cpu->mem, cpu->hl);
         default: debug_assert(0);
     }
@@ -32,650 +36,454 @@ uint8_t* get_r8(virtual_cpu *cpu, uint8_t r8_id)
     return NULL;
 }
 
-uint16_t* get_r16(virtual_cpu *cpu, uint8_t r16_id)
+static uint16_t *get_r16(virtual_cpu *cpu, uint8_t r16_id)
 {
     switch (r16_id)
     {
-        case 0: return &(cpu->bc);
-        case 1: return &(cpu->de);
-        case 2: return &(cpu->hl);
-        case 3: return &(cpu->sp);
+        case 0: return &cpu->bc;
+        case 1: return &cpu->de;
+        case 2: return &cpu->hl;
+        case 3: return &cpu->sp;
         default: debug_assert(0);
     }
 
     return NULL;
 }
 
-const uint8_t FLAG_CARRY = 4;
-const uint8_t FLAG_HALF_CARRY = 5; // TODO
-const uint8_t FLAG_SUBTRACTION = 6; // TODO: clear zero flag on non-subtraction block 0 instr
-const uint8_t FLAG_ZERO = 7;
-
-uint8_t get_flag(virtual_cpu *cpu, uint8_t flag)
+static uint8_t flag_get(virtual_cpu *cpu, uint8_t mask)
 {
-    debug_assert(flag >= 4 && flag <= 7);
-    return (cpu->f & (1 << flag)) >> flag;
+    return (cpu->f & mask) != 0;
 }
 
-void set_flag(virtual_cpu *cpu, uint8_t flag)
+static void flags_write(virtual_cpu *cpu, uint8_t z, uint8_t n, uint8_t h, uint8_t c)
 {
-    debug_assert(flag >= 4 && flag <= 7);
-    cpu->f |= (1 << flag);
+    cpu->f = (cpu->f & F_LOWER_NIBBLE)
+        | (z ? F_MASK_Z : 0)
+        | (n ? F_MASK_N : 0)
+        | (h ? F_MASK_H : 0)
+        | (c ? F_MASK_C : 0);
 }
 
-void clear_flag(virtual_cpu *cpu, uint8_t flag)
+static void flags_write_preserve_c(virtual_cpu *cpu, uint8_t z, uint8_t n, uint8_t h)
 {
-    debug_assert(flag >= 4 && flag <= 7);
-    cpu->f ^= (1 << flag);
+    uint8_t c = flag_get(cpu, F_MASK_C);
+    flags_write(cpu, z, n, h, c);
 }
 
-void perform_8bit_add(virtual_cpu *cpu, uint8_t *dest, uint8_t addend1, uint8_t addend2)
+static void alu_inc_r8(virtual_cpu *cpu, uint8_t *dest)
 {
-    uint8_t cpu_sum = addend1 + addend2;
-
-    if (cpu_sum == 0)
-    {
-        set_flag(cpu, FLAG_ZERO);
-    }
-
-    if (cpu_sum < addend1)
-    {
-        set_flag(cpu, FLAG_CARRY);
-    }
-
-    if (dest != NULL)
-    {
-        *dest = cpu_sum;
-    }
+    uint8_t value = *dest;
+    uint8_t result = value + 1;
+    *dest = result;
+    flags_write_preserve_c(cpu, result == 0, 0, (value & 0x0F) == 0x0F);
 }
 
-void perform_8bit_sub(virtual_cpu *cpu, uint8_t *dest, uint8_t minuend, uint8_t subtrahend)
+static void alu_dec_r8(virtual_cpu *cpu, uint8_t *dest)
 {
-    uint8_t cpu_difference = minuend - subtrahend;
-
-    if (cpu_difference == 0)
-    {
-        set_flag(cpu, FLAG_ZERO);
-    }
-
-    if (subtrahend > minuend)
-    {
-        set_flag(cpu, FLAG_CARRY);
-    }
-
-    set_flag(cpu, FLAG_SUBTRACTION);
-
-    if (dest != NULL)
-    {
-        *dest = cpu_difference;
-    }
+    uint8_t value = *dest;
+    uint8_t result = value - 1;
+    *dest = result;
+    flags_write_preserve_c(cpu, result == 0, 1, (value & 0x0F) == 0);
 }
 
-void perform_16bit_add(virtual_cpu *cpu, uint16_t *dest, uint16_t addend1, uint16_t addend2)
+static void alu_add_a_r8(virtual_cpu *cpu, uint8_t operand)
 {
-    uint16_t cpu_sum = addend1 + addend2;
-
-    if (cpu_sum == 0)
-    {
-        set_flag(cpu, FLAG_ZERO);
-    }
-
-    if (cpu_sum < addend1)
-    {
-        set_flag(cpu, FLAG_CARRY);
-    }
-
-    if (dest != NULL)
-    {
-        *dest = cpu_sum;
-    }
+    uint8_t a = cpu->a;
+    uint8_t result = a + operand;
+    cpu->a = result;
+    flags_write(cpu,
+        result == 0,
+        0,
+        ((a & 0x0F) + (operand & 0x0F)) > 0x0F,
+        result < a);
 }
 
-void perform_16bit_sub(virtual_cpu *cpu, uint16_t *dest, uint16_t minuend, uint16_t subtrahend)
+static void alu_adc_a_r8(virtual_cpu *cpu, uint8_t operand)
 {
-    uint16_t cpu_difference = minuend - subtrahend;
-
-    if (cpu_difference == 0)
-    {
-        set_flag(cpu, FLAG_ZERO);
-    }
-
-    if (subtrahend > minuend)
-    {
-        set_flag(cpu, FLAG_CARRY);
-    }
-
-    set_flag(cpu, FLAG_SUBTRACTION);
-
-    if (dest != NULL)
-    {
-        *dest = cpu_difference;
-    }
+    uint8_t carry = flag_get(cpu, F_MASK_C);
+    uint8_t a = cpu->a;
+    uint16_t result = (uint16_t)a + operand + carry;
+    cpu->a = (uint8_t)result;
+    flags_write(cpu,
+        (uint8_t)result == 0,
+        0,
+        ((a & 0x0F) + (operand & 0x0F) + carry) > 0x0F,
+        result > 0xFF);
 }
 
-void perform_8bit_and(virtual_cpu *cpu, uint8_t *dest, uint8_t operand1, uint8_t operand2)
+static void alu_sub_a_r8(virtual_cpu *cpu, uint8_t operand, uint8_t write_result)
 {
-    uint8_t result = operand1 & operand2;
-
-    if (result == 0)
+    uint8_t a = cpu->a;
+    uint8_t result = a - operand;
+    if (write_result)
     {
-        set_flag(cpu, FLAG_ZERO);
+        cpu->a = result;
     }
-
-    if (dest != NULL)
-    {
-        *dest = result;
-    }
+    flags_write(cpu,
+        result == 0,
+        1,
+        (a & 0x0F) < (operand & 0x0F),
+        a < operand);
 }
 
-void perform_8bit_xor(virtual_cpu *cpu, uint8_t *dest, uint8_t operand1, uint8_t operand2)
+static void alu_sbc_a_r8(virtual_cpu *cpu, uint8_t operand)
 {
-    uint8_t result = operand1 ^ operand2;
-
-    if (result == 0)
-    {
-        set_flag(cpu, FLAG_ZERO);
-    }
-
-    if (dest != NULL)
-    {
-        *dest = result;
-    }
+    uint8_t carry = flag_get(cpu, F_MASK_C);
+    uint8_t a = cpu->a;
+    uint16_t subtrahend = operand + carry;
+    uint8_t result = a - (uint8_t)subtrahend;
+    cpu->a = result;
+    flags_write(cpu,
+        result == 0,
+        1,
+        (a & 0x0F) < ((uint8_t)subtrahend & 0x0F),
+        (uint16_t)a < subtrahend);
 }
 
-void perform_8bit_or(virtual_cpu *cpu, uint8_t *dest, uint8_t operand1, uint8_t operand2)
+static void alu_and_a_r8(virtual_cpu *cpu, uint8_t operand)
 {
-    uint8_t result = operand1 | operand2;
-
-    if (result == 0)
-    {
-        set_flag(cpu, FLAG_ZERO);
-    }
-
-    if (dest != NULL)
-    {
-        *dest = result;
-    }
+    uint8_t result = cpu->a & operand;
+    cpu->a = result;
+    flags_write(cpu, result == 0, 0, 1, 0);
 }
 
-/*
- * ----------------------------------------------------------------
- * Block Zero Instructions
- * ----------------------------------------------------------------
- */
+static void alu_xor_a_r8(virtual_cpu *cpu, uint8_t operand)
+{
+    uint8_t result = cpu->a ^ operand;
+    cpu->a = result;
+    flags_write(cpu, result == 0, 0, 0, 0);
+}
 
-void nop(virtual_cpu *cpu, uint8_t opcode)
+static void alu_or_a_r8(virtual_cpu *cpu, uint8_t operand)
+{
+    uint8_t result = cpu->a | operand;
+    cpu->a = result;
+    flags_write(cpu, result == 0, 0, 0, 0);
+}
+
+static void alu_add_hl_r16(virtual_cpu *cpu, uint16_t operand)
+{
+    uint16_t hl = cpu->hl;
+    uint16_t result = hl + operand;
+    cpu->hl = result;
+    uint8_t z = flag_get(cpu, F_MASK_Z);
+    flags_write(cpu, z, 0, (hl & 0x0FFF) + (operand & 0x0FFF) > 0x0FFF, result < hl);
+}
+
+static void exec_nop(virtual_cpu *cpu)
 {
     (void)cpu;
-    (void)opcode;
 }
 
-void inc_r8(virtual_cpu *cpu, uint8_t opcode)
+static void exec_inc_r8(virtual_cpu *cpu, const instr_operands *ops)
 {
-    uint8_t r8_id = (opcode & 0b111000) >> 3;
-    uint8_t *r8 = get_r8(cpu, r8_id);
-    perform_8bit_add(cpu, r8, *r8, 1);
+    alu_inc_r8(cpu, get_r8(cpu, ops->r8));
 }
 
-void dec_r8(virtual_cpu *cpu, uint8_t opcode)
+static void exec_dec_r8(virtual_cpu *cpu, const instr_operands *ops)
 {
-    uint8_t r8_id = (opcode & 0b111000) >> 3;
-    uint8_t *r8 = get_r8(cpu, r8_id);
-    perform_8bit_sub(cpu, r8, *r8, 1);
+    alu_dec_r8(cpu, get_r8(cpu, ops->r8));
 }
 
-void inc_r16(virtual_cpu *cpu, uint8_t opcode)
+static void exec_inc_r16(virtual_cpu *cpu, const instr_operands *ops)
 {
-    uint8_t r16_id = (opcode & 0b110000) >> 4;
-    uint16_t *r16 = get_r16(cpu, r16_id);
-    perform_16bit_add(cpu, r16, *r16, 1);
+    uint16_t *r16 = get_r16(cpu, ops->r16);
+    (*r16)++;
 }
 
-void dec_r16(virtual_cpu *cpu, uint8_t opcode)
+static void exec_dec_r16(virtual_cpu *cpu, const instr_operands *ops)
 {
-    uint8_t r16_id = (opcode & 0b110000) >> 4;
-    uint16_t *r16 = get_r16(cpu, r16_id);
-    perform_16bit_sub(cpu, r16, *r16, 1);
+    uint16_t *r16 = get_r16(cpu, ops->r16);
+    (*r16)--;
 }
 
-void add_hl_r16(virtual_cpu *cpu, uint8_t opcode)
+static void exec_add_hl_r16(virtual_cpu *cpu, const instr_operands *ops)
 {
-    uint8_t r16_id = (opcode & 0b110000) >> 4;
-    uint16_t r16 = *get_r16(cpu, r16_id);
-    perform_16bit_add(cpu, &(cpu->hl), cpu->hl, r16);
+    alu_add_hl_r16(cpu, *get_r16(cpu, ops->r16));
 }
 
-void ld_r16_imm16(virtual_cpu *cpu, uint8_t opcode)
+static void exec_ld_r16_imm16(virtual_cpu *cpu, const instr_operands *ops)
 {
-    uint16_t *r16 = get_r16(cpu, (opcode >> 4) & 0b11);
-    uint16_t imm16 = cpu->code[cpu->pc + 1] | (cpu->code[cpu->pc + 2] << 8);
-    *r16 = imm16;
+    uint16_t *r16 = get_r16(cpu, ops->r16);
+    *r16 = cpu->code[cpu->pc + 1] | ((uint16_t)cpu->code[cpu->pc + 2] << 8);
 }
 
-void ld_r8_imm8(virtual_cpu *cpu, uint8_t opcode)
+static void exec_ld_r8_imm8(virtual_cpu *cpu, const instr_operands *ops)
 {
-    uint8_t *r8 = get_r8(cpu, (opcode >> 3) & 0b111);
-    uint16_t imm8 = cpu->code[cpu->pc + 1];
-    *r8 = imm8;
+    *get_r8(cpu, ops->r8) = cpu->code[cpu->pc + 1];
 }
 
-void ld_r16mem_a(virtual_cpu *cpu, uint8_t opcode)
+static void exec_ld_r16mem_a(virtual_cpu *cpu, const instr_operands *ops)
 {
-    //TODO
+    (void)cpu;
+    (void)ops;
     printf("not implemented\n");
 }
 
-void ld_a_r16mem(virtual_cpu *cpu, uint8_t opcode)
+static void exec_ld_a_r16mem(virtual_cpu *cpu, const instr_operands *ops)
 {
-    //TODO
+    (void)cpu;
+    (void)ops;
     printf("not implemented\n");
 }
 
-void ld_imm16_sp(virtual_cpu *cpu, uint8_t opcode)
+static void exec_ld_imm16_sp(virtual_cpu *cpu)
 {
-    //TODO
+    (void)cpu;
     printf("not implemented\n");
 }
 
-void rlca(virtual_cpu *cpu, uint8_t opcode)
+static void exec_rlca(virtual_cpu *cpu)
 {
-    uint8_t *a = get_r8(cpu, R8_ID_A);
-    if ((*a) & (1 << 7))
-    {
-        set_flag(cpu, FLAG_CARRY);
-    }
-    else
-    {
-        clear_flag(cpu, FLAG_CARRY);
-    }
-    *a = ((*a) << 1) | get_flag(cpu, FLAG_CARRY);
-
-    clear_flag(cpu, FLAG_ZERO);
-    clear_flag(cpu, FLAG_HALF_CARRY);
-    clear_flag(cpu, FLAG_SUBTRACTION);
+    uint8_t a = cpu->a;
+    uint8_t carry = (a >> 7) & 1;
+    cpu->a = (uint8_t)((a << 1) | carry);
+    flags_write(cpu, 0, 0, 0, carry);
 }
 
-void rrca(virtual_cpu *cpu, uint8_t opcode)
+static void exec_rrca(virtual_cpu *cpu)
 {
-    uint8_t *a = get_r8(cpu, R8_ID_A);
-    if ((*a) & 1)
-    {
-        set_flag(cpu, FLAG_CARRY);
-    }
-    else
-    {
-        clear_flag(cpu, FLAG_CARRY);
-    }
-    *a = ((*a) >> 1) | (get_flag(cpu, FLAG_CARRY) << 7);
-
-    clear_flag(cpu, FLAG_ZERO);
-    clear_flag(cpu, FLAG_HALF_CARRY);
-    clear_flag(cpu, FLAG_SUBTRACTION);
+    uint8_t a = cpu->a;
+    uint8_t carry = a & 1;
+    cpu->a = (uint8_t)((a >> 1) | (carry << 7));
+    flags_write(cpu, 0, 0, 0, carry);
 }
 
-void rla(virtual_cpu *cpu, uint8_t opcode)
+static void exec_rla(virtual_cpu *cpu)
 {
-    uint8_t *a = get_r8(cpu, R8_ID_A);
-    uint8_t a_val = *a;
-    *a = (a_val << 1) | get_flag(cpu, FLAG_CARRY);
-    if (a_val & (1 << 7))
-    {
-        set_flag(cpu, FLAG_CARRY);
-    }
-    else
-    {
-        clear_flag(cpu, FLAG_CARRY);
-    }
-
-    clear_flag(cpu, FLAG_ZERO);
-    clear_flag(cpu, FLAG_HALF_CARRY);
-    clear_flag(cpu, FLAG_SUBTRACTION);
+    uint8_t a = cpu->a;
+    uint8_t old_carry = flag_get(cpu, F_MASK_C);
+    uint8_t new_carry = (a >> 7) & 1;
+    cpu->a = (uint8_t)((a << 1) | old_carry);
+    flags_write(cpu, 0, 0, 0, new_carry);
 }
 
-void rra(virtual_cpu *cpu, uint8_t opcode)
+static void exec_rra(virtual_cpu *cpu)
 {
-    uint8_t *a = get_r8(cpu, R8_ID_A);
-    uint8_t a_val = *a;
-    *a = (a_val >> 1) | (get_flag(cpu, FLAG_CARRY) << 7);
-    if (a_val & 1)
-    {
-        set_flag(cpu, FLAG_CARRY);
-    }
-    else
-    {
-        clear_flag(cpu, FLAG_CARRY);
-    }
-
-    clear_flag(cpu, FLAG_ZERO);
-    clear_flag(cpu, FLAG_HALF_CARRY);
-    clear_flag(cpu, FLAG_SUBTRACTION);
+    uint8_t a = cpu->a;
+    uint8_t old_carry = flag_get(cpu, F_MASK_C);
+    uint8_t new_carry = a & 1;
+    cpu->a = (uint8_t)((a >> 1) | (old_carry << 7));
+    flags_write(cpu, 0, 0, 0, new_carry);
 }
 
-void daa(virtual_cpu *cpu, uint8_t opcode)
+static void exec_daa(virtual_cpu *cpu)
 {
-    uint8_t *a = get_r8(cpu, R8_ID_A);
     uint8_t adjustment = 0;
-    if (get_flag(cpu, FLAG_SUBTRACTION))
+    uint8_t a = cpu->a;
+
+    if (flag_get(cpu, F_MASK_N))
     {
-        if (get_flag(cpu, FLAG_HALF_CARRY))
+        if (flag_get(cpu, F_MASK_H))
         {
-            adjustment += 0x6;
+            adjustment += 0x06;
         }
-        if (get_flag(cpu, FLAG_CARRY))
-        {
-            adjustment += 0x60;
-        }
-        *a -= adjustment;
-        clear_flag(cpu, FLAG_CARRY);
-    }
-    else
-    {
-        if (get_flag(cpu, FLAG_HALF_CARRY) || ((*a) & 0xf) > 0x9)
-        {
-            adjustment += 0x6;
-        }
-        if (get_flag(cpu, FLAG_CARRY) || (*a) > 0x99)
+        if (flag_get(cpu, F_MASK_C))
         {
             adjustment += 0x60;
-            set_flag(cpu, FLAG_CARRY);
         }
-        else
-        {
-            clear_flag(cpu, FLAG_CARRY);
-        }
-        *a += adjustment;
-    }
-
-    if ((*a) == 0)
-    {
-        set_flag(cpu, FLAG_ZERO);
+        a -= adjustment;
+        flags_write(cpu, a == 0, 1, 0, 0);
     }
     else
     {
-        clear_flag(cpu, FLAG_ZERO);
-    }
-    clear_flag(cpu, FLAG_HALF_CARRY);
-}
-
-void cpl(virtual_cpu *cpu, uint8_t opcode)
-{
-    uint8_t *a = get_r8(cpu, R8_ID_A);
-    *a = ~(*a);
-    set_flag(cpu, FLAG_SUBTRACTION);
-    set_flag(cpu, FLAG_HALF_CARRY);
-}
-
-void scf(virtual_cpu *cpu, uint8_t opcode)
-{
-    set_flag(cpu, FLAG_CARRY);
-    clear_flag(cpu, FLAG_SUBTRACTION);
-    clear_flag(cpu, FLAG_HALF_CARRY);
-}
-
-void ccf(virtual_cpu *cpu, uint8_t opcode)
-{
-    if (get_flag(cpu, FLAG_CARRY))
-    {
-        clear_flag(cpu, FLAG_CARRY);
-    }
-    else
-    {
-        set_flag(cpu, FLAG_CARRY);
-    }
-    clear_flag(cpu, FLAG_SUBTRACTION);
-    clear_flag(cpu, FLAG_HALF_CARRY);
-}
-
-void jr_imm8(virtual_cpu *cpu, uint8_t opcode)
-{
-    //TODO
-    printf("not implemented\n");
-}
-
-void jr_cond_imm8(virtual_cpu *cpu, uint8_t opcode)
-{
-    //TODO
-    printf("not implemented\n");
-}
-
-void stop(virtual_cpu *cpu, uint8_t opcode)
-{
-    //TODO
-    printf("not implemented\n");
-}
-
-const instruction block_zero_instructions[] =
-{
-    {
-        0b111111,
-        0b000000,
-        1,
-        1,
-        nop
-    },
-    {
-        0b000111,
-        0b000100,
-        1,
-        1,
-        inc_r8
-    },
-    {
-        0b000111,
-        0b000101,
-        1,
-        1,
-        dec_r8
-    },
-    {
-        0b001111,
-        0b000011,
-        1,
-        1,
-        inc_r16
-    },
-    {
-        0b001111,
-        0b001011,
-        1,
-        1,
-        dec_r16
-    },
-    {
-        0b001111,
-        0b001001,
-        1,
-        1,
-        add_hl_r16
-    },
-    {
-        0b001111,
-        0b000001,
-        3,
-        3,
-        ld_r16_imm16
-    },
-    {
-        0b000111,
-        0b000110,
-        2,
-        2,
-        ld_r8_imm8
-    },
-    {
-        0b111111,
-        0b000111,
-        1,
-        1,
-        rlca
-    },
-    {
-        0b111111,
-        0b001111,
-        1,
-        1,
-        rrca
-    },
-    {
-        0b111111,
-        0b010111,
-        1,
-        1,
-        rla
-    },
-    {
-        0b111111,
-        0b011111,
-        1,
-        1,
-        rra
-    },
-    {
-        0b111111,
-        0b101111,
-        1,
-        1,
-        cpl
-    },
-    {
-        0b111111,
-        0b110111,
-        1,
-        1,
-        scf
-    },
-    {
-        0b111111,
-        0b111111,
-        1,
-        1,
-        ccf
-    },
-    {
-        0b111111,
-        0b100111,
-        1,
-        1,
-        daa
-    }
-};
-
-const size_t block_zero_instructions_count = sizeof(block_zero_instructions) / sizeof(instruction);
-
-void execute_block_zero_instruction(virtual_cpu *cpu, uint8_t opcode)
-{
-    for (size_t i = 0; i < block_zero_instructions_count; ++i)
-    {
-        if ((opcode & block_zero_instructions[i].bitmask) == block_zero_instructions[i].pattern)
+        if (flag_get(cpu, F_MASK_H) || (a & 0x0F) > 0x09)
         {
-            block_zero_instructions[i].exec(cpu, opcode);
-            cpu->pc += block_zero_instructions[i].bytes;
-            return;
+            adjustment += 0x06;
         }
+        uint8_t carry = 0;
+        if (flag_get(cpu, F_MASK_C) || a > 0x99)
+        {
+            adjustment += 0x60;
+            carry = 1;
+        }
+        a += adjustment;
+        flags_write(cpu, a == 0, 0, 0, carry);
     }
 
-    printf("unimplemented opcode %d\n", opcode);
-    return;
+    cpu->a = a;
 }
 
-/*
- * ----------------------------------------------------------------
- * Block One Instructions
- * ----------------------------------------------------------------
- */
-
-void execute_block_one_instruction(virtual_cpu *cpu, uint8_t opcode)
+static void exec_cpl(virtual_cpu *cpu)
 {
-    // subtraction flag is only used by daa instruction in block zero, so we can clear it here
-    clear_flag(cpu, FLAG_SUBTRACTION);
-
-    cpu->pc += 1;
-
-    if (opcode == 0b01110110)
-    {
-        printf("halt instruction not implemented\n");
-        return;
-    }
-
-    uint8_t src_r8_id = opcode & 0b111;
-    uint8_t dest_r8_id = (opcode >> 3) & 0b111;
-
-    uint8_t src = *get_r8(cpu, src_r8_id);
-    uint8_t *dest = get_r8(cpu, dest_r8_id);
-
-    *dest = src;
+    cpu->a = (uint8_t)~cpu->a;
+    flags_write(cpu, flag_get(cpu, F_MASK_Z), 1, 1, flag_get(cpu, F_MASK_C));
 }
 
-/*
- * ----------------------------------------------------------------
- * Block Two Instructions
- * ----------------------------------------------------------------
- */
-
-const uint8_t BLOCK_TWO_3BIT_OPCODE_ADD_A_R8 = 0;
-const uint8_t BLOCK_TWO_3BIT_OPCODE_ADC_A_R8 = 1;
-const uint8_t BLOCK_TWO_3BIT_OPCODE_SUB_A_R8 = 2;
-const uint8_t BLOCK_TWO_3BIT_OPCODE_SBC_A_R8 = 3;
-const uint8_t BLOCK_TWO_3BIT_OPCODE_AND_A_R8 = 4;
-const uint8_t BLOCK_TWO_3BIT_OPCODE_XOR_A_R8 = 5;
-const uint8_t BLOCK_TWO_3BIT_OPCODE_OR_A_R8 = 6;
-const uint8_t BLOCK_TWO_3BIT_OPCODE_CP_A_R8 = 7;
-
-void execute_block_two_instruction(virtual_cpu *cpu, uint8_t opcode)
+static void exec_scf(virtual_cpu *cpu)
 {
-    // subtraction flag is only used by daa instruction in block zero, so we can clear it here
-    clear_flag(cpu, FLAG_SUBTRACTION);
+    flags_write(cpu, flag_get(cpu, F_MASK_Z), 0, 0, 1);
+}
 
-    uint8_t r8_id = opcode & 0b111;
-    uint8_t r8 = *get_r8(cpu, r8_id);
-    uint8_t *a = &(cpu->a);
+static void exec_ccf(virtual_cpu *cpu)
+{
+    uint8_t carry = !flag_get(cpu, F_MASK_C);
+    flags_write(cpu, flag_get(cpu, F_MASK_Z), 0, 0, carry);
+}
 
-    uint8_t three_bit_opcode = (opcode >> 3) & 0b111;
+static void exec_jr_imm8(virtual_cpu *cpu)
+{
+    (void)cpu;
+    printf("not implemented\n");
+}
 
-    switch (three_bit_opcode)
+static void exec_jr_cond_imm8(virtual_cpu *cpu)
+{
+    (void)cpu;
+    printf("not implemented\n");
+}
+
+static void exec_stop(virtual_cpu *cpu)
+{
+    (void)cpu;
+    printf("not implemented\n");
+}
+
+static void exec_ld_r8_r8(virtual_cpu *cpu, const instr_operands *ops)
+{
+    *get_r8(cpu, ops->r8_dest) = *get_r8(cpu, ops->r8_src);
+}
+
+static void exec_halt(virtual_cpu *cpu)
+{
+    (void)cpu;
+    printf("halt instruction not implemented\n");
+}
+
+static void exec_alu(virtual_cpu *cpu, const instr_operands *ops)
+{
+    uint8_t operand = *get_r8(cpu, ops->r8);
+
+    switch (ops->alu_op)
     {
-        case BLOCK_TWO_3BIT_OPCODE_ADD_A_R8:
-            perform_8bit_add(cpu, a, *a, r8);
+        case 0:
+            alu_add_a_r8(cpu, operand);
             break;
-        case BLOCK_TWO_3BIT_OPCODE_ADC_A_R8:
-            perform_8bit_add(cpu, a, *a, r8 + get_flag(cpu, FLAG_CARRY));
+        case 1:
+            alu_adc_a_r8(cpu, operand);
             break;
-        case BLOCK_TWO_3BIT_OPCODE_SUB_A_R8:
-            perform_8bit_sub(cpu, a, *a, r8);
+        case 2:
+            alu_sub_a_r8(cpu, operand, 1);
             break;
-        case BLOCK_TWO_3BIT_OPCODE_SBC_A_R8:
-            perform_8bit_sub(cpu, a, *a, r8 + get_flag(cpu, FLAG_CARRY));
+        case 3:
+            alu_sbc_a_r8(cpu, operand);
             break;
-        case BLOCK_TWO_3BIT_OPCODE_AND_A_R8:
-            perform_8bit_and(cpu, a, *a, r8);
+        case 4:
+            alu_and_a_r8(cpu, operand);
             break;
-        case BLOCK_TWO_3BIT_OPCODE_XOR_A_R8:
-            perform_8bit_xor(cpu, a, *a, r8);
+        case 5:
+            alu_xor_a_r8(cpu, operand);
             break;
-        case BLOCK_TWO_3BIT_OPCODE_OR_A_R8:
-            perform_8bit_or(cpu, a, *a, r8);
+        case 6:
+            alu_or_a_r8(cpu, operand);
             break;
-        case BLOCK_TWO_3BIT_OPCODE_CP_A_R8:
-            perform_8bit_sub(cpu, NULL, *a, r8);
+        case 7:
+            alu_sub_a_r8(cpu, operand, 0);
             break;
         default:
-            printf("invalid block two instruction");
+            debug_assert(0);
             break;
     }
-
-    cpu->pc += 1;
 }
 
-/*
- * ----------------------------------------------------------------
- * Block Three Instructions
- * ----------------------------------------------------------------
- */
-
-void execute_block_three_instruction(virtual_cpu *cpu, uint8_t opcode)
+static void exec_unknown(virtual_cpu *cpu, uint8_t opcode)
 {
-    // subtraction flag is only used by daa instruction in block zero, so we can clear it here
-    clear_flag(cpu, FLAG_SUBTRACTION);
-    (void)opcode;
+    (void)cpu;
     printf("block three instructions not implemented\n");
+    (void)opcode;
+}
+
+void execute_instruction(virtual_cpu *cpu, const decoded_instr *instr)
+{
+    switch (instr->id)
+    {
+        case INSTR_NOP:
+            exec_nop(cpu);
+            break;
+        case INSTR_INC_R8:
+            exec_inc_r8(cpu, &instr->ops);
+            break;
+        case INSTR_DEC_R8:
+            exec_dec_r8(cpu, &instr->ops);
+            break;
+        case INSTR_INC_R16:
+            exec_inc_r16(cpu, &instr->ops);
+            break;
+        case INSTR_DEC_R16:
+            exec_dec_r16(cpu, &instr->ops);
+            break;
+        case INSTR_ADD_HL_R16:
+            exec_add_hl_r16(cpu, &instr->ops);
+            break;
+        case INSTR_LD_R16_IMM16:
+            exec_ld_r16_imm16(cpu, &instr->ops);
+            break;
+        case INSTR_LD_R8_IMM8:
+            exec_ld_r8_imm8(cpu, &instr->ops);
+            break;
+        case INSTR_LD_R16MEM_A:
+            exec_ld_r16mem_a(cpu, &instr->ops);
+            break;
+        case INSTR_LD_A_R16MEM:
+            exec_ld_a_r16mem(cpu, &instr->ops);
+            break;
+        case INSTR_LD_IMM16_SP:
+            exec_ld_imm16_sp(cpu);
+            break;
+        case INSTR_RLCA:
+            exec_rlca(cpu);
+            break;
+        case INSTR_RRCA:
+            exec_rrca(cpu);
+            break;
+        case INSTR_RLA:
+            exec_rla(cpu);
+            break;
+        case INSTR_RRA:
+            exec_rra(cpu);
+            break;
+        case INSTR_DAA:
+            exec_daa(cpu);
+            break;
+        case INSTR_CPL:
+            exec_cpl(cpu);
+            break;
+        case INSTR_SCF:
+            exec_scf(cpu);
+            break;
+        case INSTR_CCF:
+            exec_ccf(cpu);
+            break;
+        case INSTR_JR_IMM8:
+            exec_jr_imm8(cpu);
+            break;
+        case INSTR_JR_COND_IMM8:
+            exec_jr_cond_imm8(cpu);
+            break;
+        case INSTR_STOP:
+            exec_stop(cpu);
+            break;
+        case INSTR_LD_R8_R8:
+            exec_ld_r8_r8(cpu, &instr->ops);
+            break;
+        case INSTR_HALT:
+            exec_halt(cpu);
+            break;
+        case INSTR_ADD_A_R8:
+        case INSTR_ADC_A_R8:
+        case INSTR_SUB_A_R8:
+        case INSTR_SBC_A_R8:
+        case INSTR_AND_A_R8:
+        case INSTR_XOR_A_R8:
+        case INSTR_OR_A_R8:
+        case INSTR_CP_A_R8:
+            exec_alu(cpu, &instr->ops);
+            break;
+        case INSTR_UNKNOWN:
+            exec_unknown(cpu, cpu->code[cpu->pc]);
+            break;
+        default:
+            debug_assert(0);
+            break;
+    }
 }

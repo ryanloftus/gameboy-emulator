@@ -2,6 +2,8 @@
 
 A Gameboy Emulator.
 
+For an overview of the codebase, file layout, and implementation status, see [ARCHITECTURE.md](ARCHITECTURE.md).
+
 ## Build and Run
 
 Requirements:
