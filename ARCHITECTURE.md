@@ -128,7 +128,7 @@ Legend: **Implemented** — usable for intended purpose in-tree. **In progress**
 | Area | Status | Notes |
 |------|--------|--------|
 | Register file | **Implemented** | `virtual_cpu` matches expected layout; F register low nibble should be 0 on hardware (not enforced). |
-| Block 0 (partial) | **In progress** | Many opcodes work via pattern table; `LD (rr),A`, `LD A,(rr)`, `LD (nn),SP`, `JR`, conditional `JR`, `STOP` are stubs (`printf` / TODO). |
+| Block 0 (partial) | **In progress** | Most opcodes work via decode table; `JR`, conditional `JR`, `STOP` are stubs (`printf` / TODO). |
 | Block 1 (`LD`) | **In progress** | Generic `LD r8,r8` works; `HALT` not implemented. |
 | Block 2 (ALU) | **Implemented** | Add/adc/sub/sbc/and/xor/or/cp with gbz80 flag rules; covered by unit tests. |
 | Block 3 | **Not implemented** | Jumps, calls, returns, `RST`, immediate ALU, etc. |

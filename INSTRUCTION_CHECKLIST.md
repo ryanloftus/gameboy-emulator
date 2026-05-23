@@ -27,9 +27,9 @@ Opcodes with bits 7–6 = `00`.
 ### Loads (16-bit immediate and memory)
 
 - [x] `ld r16, imm16` — bc, de, hl, sp (4)
-- [~] `ld [r16mem], a` — bc, de, hl+, hl- (4); handler stubbed, not in block-0 table
-- [~] `ld a, [r16mem]` — bc, de, hl+, hl- (4); handler stubbed, not in block-0 table
-- [~] `ld [imm16], sp` — handler stubbed, not in block-0 table
+- [x] `ld [r16mem], a` — bc, de, hl+, hl- (4)
+- [x] `ld a, [r16mem]` — bc, de, hl+, hl- (4)
+- [x] `ld [imm16], sp`
 
 ### 16-bit inc/dec and add
 
@@ -191,12 +191,12 @@ Fetched after opcode `0xCB`; second byte selects operation. None implemented.
 
 | Section | Families | Done | Partial | Not started |
 |---------|----------|------|---------|-------------|
-| Block 0 | 22 | 16 | 6 | 0 |
+| Block 0 | 22 | 19 | 3 | 0 |
 | Block 1 | 2 | 1 | 0 | 1 |
 | Block 2 | 8 | 8 | 0 | 0 |
 | Block 3 | 28 | 0 | 0 | 28 |
 | CB prefix | 11 | 0 | 0 | 11 |
-| **Total (families)** | **71** | **25** | **6** | **40** |
+| **Total (families)** | **71** | **28** | **3** | **40** |
 
 *Partial block-0 items need decode-table entries and real handlers, not just stub functions.*
 

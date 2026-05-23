@@ -50,6 +50,42 @@ static uint16_t *get_r16(virtual_cpu *cpu, uint8_t r16_id)
     return NULL;
 }
 
+/* r16mem: 0=BC, 1=DE, 2=HL+, 3=HL-. Sets *post_hl_step to -1, 0, or +1. */
+static uint16_t r16mem_resolve(virtual_cpu *cpu, uint8_t r16mem_id, int8_t *post_hl_step)
+{
+    switch (r16mem_id)
+    {
+        case 0:
+            *post_hl_step = 0;
+            return cpu->bc;
+        case 1:
+            *post_hl_step = 0;
+            return cpu->de;
+        case 2:
+            *post_hl_step = 1;
+            return cpu->hl;
+        case 3:
+            *post_hl_step = -1;
+            return cpu->hl;
+        default:
+            debug_assert(0);
+            *post_hl_step = 0;
+            return 0;
+    }
+}
+
+static void r16mem_apply_hl_step(virtual_cpu *cpu, int8_t post_hl_step)
+{
+    if (post_hl_step > 0)
+    {
+        cpu->hl++;
+    }
+    else if (post_hl_step < 0)
+    {
+        cpu->hl--;
+    }
+}
+
 static uint8_t flag_get(virtual_cpu *cpu, uint8_t mask)
 {
     return (cpu->f & mask) != 0;
@@ -215,22 +251,30 @@ static void exec_ld_r8_imm8(virtual_cpu *cpu, const instr_operands *ops)
 
 static void exec_ld_r16mem_a(virtual_cpu *cpu, const instr_operands *ops)
 {
-    (void)cpu;
-    (void)ops;
-    printf("not implemented\n");
+    debug_assert(cpu->mem != NULL);
+
+    int8_t post_hl_step = 0;
+    uint16_t addr = r16mem_resolve(cpu, ops->r16, &post_hl_step);
+    write_memory8(cpu->mem, addr, cpu->a);
+    r16mem_apply_hl_step(cpu, post_hl_step);
 }
 
 static void exec_ld_a_r16mem(virtual_cpu *cpu, const instr_operands *ops)
 {
-    (void)cpu;
-    (void)ops;
-    printf("not implemented\n");
+    debug_assert(cpu->mem != NULL);
+
+    int8_t post_hl_step = 0;
+    uint16_t addr = r16mem_resolve(cpu, ops->r16, &post_hl_step);
+    cpu->a = read_memory8(cpu->mem, addr);
+    r16mem_apply_hl_step(cpu, post_hl_step);
 }
 
 static void exec_ld_imm16_sp(virtual_cpu *cpu)
 {
-    (void)cpu;
-    printf("not implemented\n");
+    debug_assert(cpu->mem != NULL);
+
+    uint16_t addr = cpu->code[cpu->pc + 1] | ((uint16_t)cpu->code[cpu->pc + 2] << 8);
+    write_memory16(cpu->mem, addr, cpu->sp);
 }
 
 static void exec_rlca(virtual_cpu *cpu)

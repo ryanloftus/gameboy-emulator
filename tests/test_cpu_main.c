@@ -26,6 +26,11 @@ void test_ccf(void);
 void test_inc_r8_half_carry(void);
 void test_inc_r8_hl_memory(void);
 void test_zero_flag_inc_dec(void);
+void test_ld_r16mem_a_bc(void);
+void test_ld_a_r16mem_de(void);
+void test_ld_r16mem_hli(void);
+void test_ld_r16mem_hld(void);
+void test_ld_imm16_sp(void);
 
 /* test_cpu_block1.c */
 void test_ld_r8_r8_bc(void);
@@ -78,6 +83,11 @@ int main(void)
     RUN_TEST(test_inc_r8_half_carry);
     RUN_TEST(test_inc_r8_hl_memory);
     RUN_TEST(test_zero_flag_inc_dec);
+    RUN_TEST(test_ld_r16mem_a_bc);
+    RUN_TEST(test_ld_a_r16mem_de);
+    RUN_TEST(test_ld_r16mem_hli);
+    RUN_TEST(test_ld_r16mem_hld);
+    RUN_TEST(test_ld_imm16_sp);
 
     RUN_TEST(test_ld_r8_r8_bc);
     RUN_TEST(test_ld_r8_r8_self);
