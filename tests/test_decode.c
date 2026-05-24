@@ -94,6 +94,27 @@ void test_decode_block2(void)
     }
 }
 
+void test_decode_block3_alu_imm8(void)
+{
+    /* ALU immediate opcodes: bits 7-6 = 11, bits 2-0 = 110, alu_op in bits 3-5 */
+    const decode_case cases[] =
+    {
+        {0xC6, INSTR_ADD_A_IMM8, 2, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF},  /* ADD A, imm8 */
+        {0xCE, INSTR_ADC_A_IMM8, 2, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF},  /* ADC A, imm8 */
+        {0xD6, INSTR_SUB_A_IMM8, 2, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF},  /* SUB A, imm8 */
+        {0xDE, INSTR_SBC_A_IMM8, 2, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF},  /* SBC A, imm8 */
+        {0xE6, INSTR_AND_A_IMM8, 2, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF},  /* AND A, imm8 */
+        {0xEE, INSTR_XOR_A_IMM8, 2, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF},  /* XOR A, imm8 */
+        {0xF6, INSTR_OR_A_IMM8, 2, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF},  /* OR A, imm8 */
+        {0xFE, INSTR_CP_A_IMM8, 2, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF},  /* CP A, imm8 */
+    };
+
+    for (size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); ++i)
+    {
+        run_decode_case(&cases[i]);
+    }
+}
+
 void test_decode_block3_unknown(void)
 {
     decoded_instr dec;

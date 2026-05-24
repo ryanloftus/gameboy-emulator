@@ -43,6 +43,14 @@ static const uint8_t instr_bytes[INSTR_COUNT] =
     [INSTR_XOR_A_R8] = 1,
     [INSTR_OR_A_R8] = 1,
     [INSTR_CP_A_R8] = 1,
+    [INSTR_ADD_A_IMM8] = 2,
+    [INSTR_ADC_A_IMM8] = 2,
+    [INSTR_SUB_A_IMM8] = 2,
+    [INSTR_SBC_A_IMM8] = 2,
+    [INSTR_AND_A_IMM8] = 2,
+    [INSTR_XOR_A_IMM8] = 2,
+    [INSTR_OR_A_IMM8] = 2,
+    [INSTR_CP_A_IMM8] = 2,
     [INSTR_UNKNOWN] = 1,
 };
 
@@ -80,6 +88,14 @@ static const uint8_t instr_cycles[INSTR_COUNT] =
     [INSTR_XOR_A_R8] = 1,
     [INSTR_OR_A_R8] = 1,
     [INSTR_CP_A_R8] = 1,
+    [INSTR_ADD_A_IMM8] = 2,
+    [INSTR_ADC_A_IMM8] = 2,
+    [INSTR_SUB_A_IMM8] = 2,
+    [INSTR_SBC_A_IMM8] = 2,
+    [INSTR_AND_A_IMM8] = 2,
+    [INSTR_XOR_A_IMM8] = 2,
+    [INSTR_OR_A_IMM8] = 2,
+    [INSTR_CP_A_IMM8] = 2,
     [INSTR_UNKNOWN] = 0,
 };
 
@@ -183,6 +199,35 @@ static bool decode_block_one(uint8_t opcode, decoded_instr *out)
     return true;
 }
 
+static bool decode_block_three(uint8_t opcode, decoded_instr *out)
+{
+    /* ALU immediate: opcode bits 3-5 = alu_op, bits 7-6 = 11, bits 2-0 = 110 */
+    static const uint8_t mask  = 0xC7;  /* 11000111 */
+    static const uint8_t pattern = 0xC6; /* 11000110 */
+
+    if ((opcode & mask) == pattern)
+    {
+        uint8_t alu_op = (opcode >> 3) & 0b111;
+
+        static const instr_id alu_imm_ids[] =
+        {
+            INSTR_ADD_A_IMM8,
+            INSTR_ADC_A_IMM8,
+            INSTR_SUB_A_IMM8,
+            INSTR_SBC_A_IMM8,
+            INSTR_AND_A_IMM8,
+            INSTR_XOR_A_IMM8,
+            INSTR_OR_A_IMM8,
+            INSTR_CP_A_IMM8,
+        };
+
+        fill_decoded(out, alu_imm_ids[alu_op], NULL);
+        return true;
+    }
+
+    return false;
+}
+
 static bool decode_block_two(uint8_t opcode, decoded_instr *out)
 {
     instr_operands ops =
@@ -229,6 +274,10 @@ bool decode_opcode(uint8_t opcode, decoded_instr *out)
         case 2:
             return decode_block_two(opcode, out);
         case 3:
+            if (decode_block_three(opcode, out))
+            {
+                return true;
+            }
             break;
         default:
             break;

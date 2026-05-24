@@ -38,6 +38,14 @@ typedef enum
     INSTR_XOR_A_R8,
     INSTR_OR_A_R8,
     INSTR_CP_A_R8,
+    INSTR_ADD_A_IMM8,
+    INSTR_ADC_A_IMM8,
+    INSTR_SUB_A_IMM8,
+    INSTR_SBC_A_IMM8,
+    INSTR_AND_A_IMM8,
+    INSTR_XOR_A_IMM8,
+    INSTR_OR_A_IMM8,
+    INSTR_CP_A_IMM8,
     INSTR_UNKNOWN,
     INSTR_COUNT
 } instr_id;

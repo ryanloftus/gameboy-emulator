@@ -454,10 +454,46 @@ static void exec_alu(virtual_cpu *cpu, const instr_operands *ops)
     }
 }
 
+static void exec_alu_imm8(virtual_cpu *cpu, const decoded_instr *instr)
+{
+    uint8_t operand = cpu->code[cpu->pc + 1];
+
+    switch (instr->id)
+    {
+        case INSTR_ADD_A_IMM8:
+            alu_add_a_r8(cpu, operand);
+            break;
+        case INSTR_ADC_A_IMM8:
+            alu_adc_a_r8(cpu, operand);
+            break;
+        case INSTR_SUB_A_IMM8:
+            alu_sub_a_r8(cpu, operand, 1);
+            break;
+        case INSTR_SBC_A_IMM8:
+            alu_sbc_a_r8(cpu, operand);
+            break;
+        case INSTR_AND_A_IMM8:
+            alu_and_a_r8(cpu, operand);
+            break;
+        case INSTR_XOR_A_IMM8:
+            alu_xor_a_r8(cpu, operand);
+            break;
+        case INSTR_OR_A_IMM8:
+            alu_or_a_r8(cpu, operand);
+            break;
+        case INSTR_CP_A_IMM8:
+            alu_sub_a_r8(cpu, operand, 0);
+            break;
+        default:
+            debug_assert(0);
+            break;
+    }
+}
+
 static void exec_unknown(virtual_cpu *cpu, uint8_t opcode)
 {
     (void)cpu;
-    printf("block three instructions not implemented\n");
+    printf("unimplemented opcode %d\n", opcode);
     (void)opcode;
 }
 
@@ -546,6 +582,16 @@ void execute_instruction(virtual_cpu *cpu, const decoded_instr *instr)
         case INSTR_OR_A_R8:
         case INSTR_CP_A_R8:
             exec_alu(cpu, &instr->ops);
+            break;
+        case INSTR_ADD_A_IMM8:
+        case INSTR_ADC_A_IMM8:
+        case INSTR_SUB_A_IMM8:
+        case INSTR_SBC_A_IMM8:
+        case INSTR_AND_A_IMM8:
+        case INSTR_XOR_A_IMM8:
+        case INSTR_OR_A_IMM8:
+        case INSTR_CP_A_IMM8:
+            exec_alu_imm8(cpu, instr);
             break;
         case INSTR_UNKNOWN:
             exec_unknown(cpu, cpu->code[cpu->pc]);

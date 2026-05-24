@@ -83,10 +83,36 @@ void test_daa_after_sub_with_carry(void);
 void test_daa_after_sub_no_adjustment(void);
 void test_alu_hl_memory(void);
 
+/* test_cpu_block3.c */
+void test_add_imm8(void);
+void test_add_imm8_carry(void);
+void test_add_imm8_half_carry(void);
+void test_add_imm8_no_half_carry(void);
+void test_adc_imm8_with_carry(void);
+void test_adc_imm8_without_carry(void);
+void test_adc_imm8_half_carry(void);
+void test_sub_imm8(void);
+void test_sub_imm8_borrow(void);
+void test_sub_imm8_zero(void);
+void test_sub_imm8_half_borrow(void);
+void test_sbc_imm8(void);
+void test_sbc_imm8_borrow_with_carry(void);
+void test_sbc_imm8_zero(void);
+void test_and_imm8(void);
+void test_and_imm8_zero(void);
+void test_xor_imm8(void);
+void test_xor_imm8_nonzero(void);
+void test_or_imm8(void);
+void test_or_imm8_zero(void);
+void test_cp_imm8(void);
+void test_cp_imm8_borrow(void);
+void test_cp_imm8_half_borrow(void);
+
 /* test_decode.c */
 void test_decode_block0(void);
 void test_decode_block1(void);
 void test_decode_block2(void);
+void test_decode_block3_alu_imm8(void);
 void test_decode_block3_unknown(void);
 
 /* test_mmu.c */
@@ -181,9 +207,34 @@ int main(void)
     RUN_TEST(test_daa_after_sub_no_adjustment);
     RUN_TEST(test_alu_hl_memory);
 
+    RUN_TEST(test_add_imm8);
+    RUN_TEST(test_add_imm8_carry);
+    RUN_TEST(test_add_imm8_half_carry);
+    RUN_TEST(test_add_imm8_no_half_carry);
+    RUN_TEST(test_adc_imm8_with_carry);
+    RUN_TEST(test_adc_imm8_without_carry);
+    RUN_TEST(test_adc_imm8_half_carry);
+    RUN_TEST(test_sub_imm8);
+    RUN_TEST(test_sub_imm8_borrow);
+    RUN_TEST(test_sub_imm8_zero);
+    RUN_TEST(test_sub_imm8_half_borrow);
+    RUN_TEST(test_sbc_imm8);
+    RUN_TEST(test_sbc_imm8_borrow_with_carry);
+    RUN_TEST(test_sbc_imm8_zero);
+    RUN_TEST(test_and_imm8);
+    RUN_TEST(test_and_imm8_zero);
+    RUN_TEST(test_xor_imm8);
+    RUN_TEST(test_xor_imm8_nonzero);
+    RUN_TEST(test_or_imm8);
+    RUN_TEST(test_or_imm8_zero);
+    RUN_TEST(test_cp_imm8);
+    RUN_TEST(test_cp_imm8_borrow);
+    RUN_TEST(test_cp_imm8_half_borrow);
+
     RUN_TEST(test_decode_block0);
     RUN_TEST(test_decode_block1);
     RUN_TEST(test_decode_block2);
+    RUN_TEST(test_decode_block3_alu_imm8);
     RUN_TEST(test_decode_block3_unknown);
 
     RUN_TEST(test_init_memory_zeroed);
