@@ -367,14 +367,38 @@ static void exec_ccf(virtual_cpu *cpu)
 
 static void exec_jr_imm8(virtual_cpu *cpu)
 {
-    (void)cpu;
-    printf("not implemented\n");
+    int8_t offset = (int8_t)cpu->code[cpu->pc + 1];
+    cpu->pc += offset;
 }
 
-static void exec_jr_cond_imm8(virtual_cpu *cpu)
+static void exec_jr_cond_imm8(virtual_cpu *cpu, const instr_operands *ops)
 {
-    (void)cpu;
-    printf("not implemented\n");
+    int8_t offset = (int8_t)cpu->code[cpu->pc + 1];
+    int taken = 0;
+
+    switch (ops->cond)
+    {
+        case 0: /* NZ */
+            taken = !flag_get(cpu, F_MASK_Z);
+            break;
+        case 1: /* Z */
+            taken = flag_get(cpu, F_MASK_Z);
+            break;
+        case 2: /* NC */
+            taken = !flag_get(cpu, F_MASK_C);
+            break;
+        case 3: /* C */
+            taken = flag_get(cpu, F_MASK_C);
+            break;
+        default:
+            debug_assert(0);
+            break;
+    }
+
+    if (taken)
+    {
+        cpu->pc += offset;
+    }
 }
 
 static void exec_stop(virtual_cpu *cpu)
@@ -502,7 +526,7 @@ void execute_instruction(virtual_cpu *cpu, const decoded_instr *instr)
             exec_jr_imm8(cpu);
             break;
         case INSTR_JR_COND_IMM8:
-            exec_jr_cond_imm8(cpu);
+            exec_jr_cond_imm8(cpu, &instr->ops);
             break;
         case INSTR_STOP:
             exec_stop(cpu);

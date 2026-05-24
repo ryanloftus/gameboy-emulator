@@ -59,8 +59,8 @@ Opcodes with bits 7–6 = `00`.
 
 ### Jumps (relative)
 
-- [~] `jr imm8` — handler stubbed, not in block-0 table
-- [~] `jr cond, imm8` — nz, z, nc, c (4); handler stubbed, not in block-0 table
+- [x] `jr imm8` — decode/cycles/bytes set in block-0 table; handler reads signed offset and updates PC
+- [x] `jr cond, imm8` — nz, z, nc, c (4); handler checks condition flag and jumps if met
 
 ### Power
 
@@ -191,14 +191,14 @@ Fetched after opcode `0xCB`; second byte selects operation. None implemented.
 
 | Section | Families | Done | Partial | Not started |
 |---------|----------|------|---------|-------------|
-| Block 0 | 22 | 19 | 3 | 0 |
+| Block 0 | 22 | 21 | 1 | 0 |
 | Block 1 | 2 | 1 | 0 | 1 |
 | Block 2 | 8 | 8 | 0 | 0 |
 | Block 3 | 28 | 0 | 0 | 28 |
 | CB prefix | 11 | 0 | 0 | 11 |
-| **Total (families)** | **71** | **28** | **3** | **40** |
+| **Total (families)** | **71** | **30** | **1** | **40** |
 
-*Partial block-0 items need decode-table entries and real handlers, not just stub functions.*
+*Partial block-0 items need decode-table entries and real handlers, not just stub functions. `jr imm8` and `jr cond, imm8` are both fully implemented.*
 
 ---
 

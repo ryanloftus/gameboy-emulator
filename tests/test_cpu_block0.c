@@ -316,6 +316,149 @@ void test_ld_r16mem_hld(void)
     TEST_ASSERT_EQUAL_UINT16(WORK_RAM_START, cpu.hl);
 }
 
+void test_jr_imm8_positive(void)
+{
+    virtual_cpu cpu;
+    uint8_t code[] = {0x18, 0x05};
+
+    cpu_test_reset(&cpu, NULL, code);
+    cpu.f = 0xF0;
+    cpu_test_run(&cpu);
+
+    TEST_ASSERT_EQUAL_UINT16(7, cpu.pc);
+    assert_flags_unchanged(&cpu, 0xF0);
+}
+
+void test_jr_imm8_negative(void)
+{
+    virtual_cpu cpu;
+    uint8_t code[] = {0x18, 0xFE};
+
+    cpu_test_reset(&cpu, NULL, code);
+    cpu.f = 0x00;
+    cpu_test_run(&cpu);
+
+    TEST_ASSERT_EQUAL_UINT16(0, cpu.pc);
+    assert_flags_unchanged(&cpu, 0x00);
+}
+
+void test_jr_imm8_zero_offset(void)
+{
+    virtual_cpu cpu;
+    uint8_t code[] = {0x18, 0x00};
+
+    cpu_test_reset(&cpu, NULL, code);
+    cpu.f = 0xF0;
+    cpu_test_run(&cpu);
+
+    TEST_ASSERT_EQUAL_UINT16(2, cpu.pc);
+    assert_flags_unchanged(&cpu, 0xF0);
+}
+
+void test_jr_nz_taken(void)
+{
+    virtual_cpu cpu;
+    uint8_t code[] = {0x20, 0x04};
+
+    cpu_test_reset(&cpu, NULL, code);
+    cpu.f = 0x00;
+    cpu_test_run(&cpu);
+
+    TEST_ASSERT_EQUAL_UINT16(6, cpu.pc);
+    assert_flags_unchanged(&cpu, 0x00);
+}
+
+void test_jr_nz_not_taken(void)
+{
+    virtual_cpu cpu;
+    uint8_t code[] = {0x20, 0x04};
+
+    cpu_test_reset(&cpu, NULL, code);
+    cpu.f = F_Z;
+    cpu_test_run(&cpu);
+
+    TEST_ASSERT_EQUAL_UINT16(2, cpu.pc);
+    assert_flags_unchanged(&cpu, F_Z);
+}
+
+void test_jr_z_taken(void)
+{
+    virtual_cpu cpu;
+    uint8_t code[] = {0x28, 0x04};
+
+    cpu_test_reset(&cpu, NULL, code);
+    cpu.f = F_Z;
+    cpu_test_run(&cpu);
+
+    TEST_ASSERT_EQUAL_UINT16(6, cpu.pc);
+    assert_flags_unchanged(&cpu, F_Z);
+}
+
+void test_jr_z_not_taken(void)
+{
+    virtual_cpu cpu;
+    uint8_t code[] = {0x28, 0x04};
+
+    cpu_test_reset(&cpu, NULL, code);
+    cpu.f = 0x00;
+    cpu_test_run(&cpu);
+
+    TEST_ASSERT_EQUAL_UINT16(2, cpu.pc);
+    assert_flags_unchanged(&cpu, 0x00);
+}
+
+void test_jr_nc_taken(void)
+{
+    virtual_cpu cpu;
+    uint8_t code[] = {0x30, 0x04};
+
+    cpu_test_reset(&cpu, NULL, code);
+    cpu.f = 0x00;
+    cpu_test_run(&cpu);
+
+    TEST_ASSERT_EQUAL_UINT16(6, cpu.pc);
+    assert_flags_unchanged(&cpu, 0x00);
+}
+
+void test_jr_nc_not_taken(void)
+{
+    virtual_cpu cpu;
+    uint8_t code[] = {0x30, 0x04};
+
+    cpu_test_reset(&cpu, NULL, code);
+    cpu.f = F_C;
+    cpu_test_run(&cpu);
+
+    TEST_ASSERT_EQUAL_UINT16(2, cpu.pc);
+    assert_flags_unchanged(&cpu, F_C);
+}
+
+void test_jr_c_taken(void)
+{
+    virtual_cpu cpu;
+    uint8_t code[] = {0x38, 0x04};
+
+    cpu_test_reset(&cpu, NULL, code);
+    cpu.f = F_C;
+    cpu_test_run(&cpu);
+
+    TEST_ASSERT_EQUAL_UINT16(6, cpu.pc);
+    assert_flags_unchanged(&cpu, F_C);
+}
+
+void test_jr_c_not_taken(void)
+{
+    virtual_cpu cpu;
+    uint8_t code[] = {0x38, 0x04};
+
+    cpu_test_reset(&cpu, NULL, code);
+    cpu.f = 0x00;
+    cpu_test_run(&cpu);
+
+    TEST_ASSERT_EQUAL_UINT16(2, cpu.pc);
+    assert_flags_unchanged(&cpu, 0x00);
+}
+
 void test_ld_imm16_sp(void)
 {
     memory mem;

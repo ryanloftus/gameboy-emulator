@@ -95,7 +95,6 @@ void test_add_hl_r16(void)
     TEST_ASSERT_EQUAL_UINT16(31, cpu.hl);
     TEST_ASSERT_EQUAL_UINT16(1, cpu.pc);
 }
-
 void test_zero_flag(void)
 {
     virtual_cpu cpu;
