@@ -89,6 +89,18 @@ void test_decode_block1(void);
 void test_decode_block2(void);
 void test_decode_block3_unknown(void);
 
+/* test_mmu.c */
+void test_init_memory_zeroed(void);
+void test_write_read_memory8(void);
+void test_write_read_memory16(void);
+void test_echo_ram_write_redirect(void);
+void test_echo_ram_read_redirect(void);
+void test_echo_ram_bidirectional(void);
+void test_echo_ram_full_range_start(void);
+void test_echo_ram_full_range_end(void);
+void test_non_echo_not_affected(void);
+void test_work_ram_independent_from_echo(void);
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -173,6 +185,17 @@ int main(void)
     RUN_TEST(test_decode_block1);
     RUN_TEST(test_decode_block2);
     RUN_TEST(test_decode_block3_unknown);
+
+    RUN_TEST(test_init_memory_zeroed);
+    RUN_TEST(test_write_read_memory8);
+    RUN_TEST(test_write_read_memory16);
+    RUN_TEST(test_echo_ram_write_redirect);
+    RUN_TEST(test_echo_ram_read_redirect);
+    RUN_TEST(test_echo_ram_bidirectional);
+    RUN_TEST(test_echo_ram_full_range_start);
+    RUN_TEST(test_echo_ram_full_range_end);
+    RUN_TEST(test_non_echo_not_affected);
+    RUN_TEST(test_work_ram_independent_from_echo);
 
     return UNITY_END();
 }

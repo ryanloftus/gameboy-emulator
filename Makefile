@@ -27,7 +27,7 @@ TARGET   = gameboy
 
 # Testing
 TEST_DIR   = tests
-TEST_SRCS  = $(filter-out $(TEST_DIR)/test_cpu_main.c, $(wildcard $(TEST_DIR)/*.c)) $(TEST_DIR)/test_cpu_main.c
+TEST_SRCS  = $(filter-out $(TEST_DIR)/test_main.c, $(wildcard $(TEST_DIR)/*.c)) $(TEST_DIR)/test_main.c
 TEST_OBJS  = $(patsubst $(TEST_DIR)/%.c,$(BUILD_DIR)/$(TEST_DIR)/%.o,$(TEST_SRCS))
 TEST_BIN   = run_tests
 UNITY_DIR  = vendor/unity

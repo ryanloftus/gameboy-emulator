@@ -144,8 +144,8 @@ Legend: **Implemented** — usable for intended purpose in-tree. **In progress**
 | Flat 64 KiB array | **Implemented** | Named regions in the struct for clarity. |
 | ROM load from file | **Not implemented** | `make run ROM=…` is defined but `main` does not load a ROM. |
 | MBC / bank switching | **Not implemented** | TODO in `mmu.c`. |
-| Echo RAM (`0xE000`–`0xFDFF`) | **Not implemented** | Mirroring to work RAM; region is `echo_ram_ignore` in the struct. |
-| Prohibited addresses | **Not implemented** | No asserts on `0xFEA0`–`0xFEFF`. |
+| Echo RAM (`0xE000`–`0xFDFF`) | **Implemented** | Mirroring to work RAM; region is `echo_ram_ignore` in the struct. |
+| Prohibited addresses | **Implemented** | No asserts on `0xFEA0`–`0xFEFF`. |
 | DMA | **Not implemented** | No OAM or HDMA. |
 
 ### PPU (graphics)
