@@ -46,6 +46,15 @@ typedef enum
     INSTR_XOR_A_IMM8,
     INSTR_OR_A_IMM8,
     INSTR_CP_A_IMM8,
+    /* CB prefix rotate/shift instructions */
+    INSTR_CB_RLC,
+    INSTR_CB_RRC,
+    INSTR_CB_RL,
+    INSTR_CB_RR,
+    INSTR_CB_SLA,
+    INSTR_CB_SRA,
+    INSTR_CB_SWAP,
+    INSTR_CB_SRL,
     INSTR_UNKNOWN,
     INSTR_COUNT
 } instr_id;
@@ -69,5 +78,6 @@ typedef struct
 } decoded_instr;
 
 bool decode_opcode(uint8_t opcode, decoded_instr *out);
+bool decode_cb_opcode(uint8_t cb_opcode, decoded_instr *out);
 
 #endif

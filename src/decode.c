@@ -51,6 +51,14 @@ static const uint8_t instr_bytes[INSTR_COUNT] =
     [INSTR_XOR_A_IMM8] = 2,
     [INSTR_OR_A_IMM8] = 2,
     [INSTR_CP_A_IMM8] = 2,
+    [INSTR_CB_RLC] = 2,
+    [INSTR_CB_RRC] = 2,
+    [INSTR_CB_RL] = 2,
+    [INSTR_CB_RR] = 2,
+    [INSTR_CB_SLA] = 2,
+    [INSTR_CB_SRA] = 2,
+    [INSTR_CB_SWAP] = 2,
+    [INSTR_CB_SRL] = 2,
     [INSTR_UNKNOWN] = 1,
 };
 
@@ -96,6 +104,14 @@ static const uint8_t instr_cycles[INSTR_COUNT] =
     [INSTR_XOR_A_IMM8] = 2,
     [INSTR_OR_A_IMM8] = 2,
     [INSTR_CP_A_IMM8] = 2,
+    [INSTR_CB_RLC] = 2,
+    [INSTR_CB_RRC] = 2,
+    [INSTR_CB_RL] = 2,
+    [INSTR_CB_RR] = 2,
+    [INSTR_CB_SLA] = 2,
+    [INSTR_CB_SRA] = 2,
+    [INSTR_CB_SWAP] = 2,
+    [INSTR_CB_SRL] = 2,
     [INSTR_UNKNOWN] = 0,
 };
 
@@ -281,6 +297,40 @@ bool decode_opcode(uint8_t opcode, decoded_instr *out)
             break;
         default:
             break;
+    }
+
+    fill_decoded(out, INSTR_UNKNOWN, NULL);
+    return false;
+}
+
+/* CB prefix decode: opcode bits 7-6 select operation type, bits 5-3 = r8 id */
+bool decode_cb_opcode(uint8_t cb_opcode, decoded_instr *out)
+{
+    if (out == NULL)
+    {
+        return false;
+    }
+
+    instr_operands ops = {0};
+    ops.r8 = cb_opcode & 0b111;
+
+    static const instr_id cb_ids[] =
+    {
+        INSTR_CB_RLC,
+        INSTR_CB_RRC,
+        INSTR_CB_RL,
+        INSTR_CB_RR,
+        INSTR_CB_SLA,
+        INSTR_CB_SRA,
+        INSTR_CB_SWAP,
+        INSTR_CB_SRL,
+    };
+
+    uint8_t op_type = (cb_opcode >> 3) & 0b111;
+    if (op_type < 8)
+    {
+        fill_decoded(out, cb_ids[op_type], &ops);
+        return true;
     }
 
     fill_decoded(out, INSTR_UNKNOWN, NULL);

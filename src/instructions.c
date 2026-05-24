@@ -491,6 +491,89 @@ static void exec_alu_imm8(virtual_cpu *cpu, const decoded_instr *instr)
     }
 }
 
+/* CB prefix rotate/shift helpers - all write Z=0/1, N=0, H=0, C=carry */
+static void exec_cb_rlc(virtual_cpu *cpu, const instr_operands *ops)
+{
+    uint8_t *dest = get_r8(cpu, ops->r8);
+    uint8_t value = *dest;
+    uint8_t carry = (value >> 7) & 1;
+    uint8_t result = (uint8_t)((value << 1) | carry);
+    *dest = result;
+    flags_write(cpu, result == 0, 0, 0, carry);
+}
+
+static void exec_cb_rrc(virtual_cpu *cpu, const instr_operands *ops)
+{
+    uint8_t *dest = get_r8(cpu, ops->r8);
+    uint8_t value = *dest;
+    uint8_t carry = value & 1;
+    uint8_t result = (uint8_t)((value >> 1) | (carry << 7));
+    *dest = result;
+    flags_write(cpu, result == 0, 0, 0, carry);
+}
+
+static void exec_cb_rl(virtual_cpu *cpu, const instr_operands *ops)
+{
+    uint8_t *dest = get_r8(cpu, ops->r8);
+    uint8_t value = *dest;
+    uint8_t old_carry = flag_get(cpu, F_MASK_C);
+    uint8_t new_carry = (value >> 7) & 1;
+    uint8_t result = (uint8_t)((value << 1) | old_carry);
+    *dest = result;
+    flags_write(cpu, result == 0, 0, 0, new_carry);
+}
+
+static void exec_cb_rr(virtual_cpu *cpu, const instr_operands *ops)
+{
+    uint8_t *dest = get_r8(cpu, ops->r8);
+    uint8_t value = *dest;
+    uint8_t old_carry = flag_get(cpu, F_MASK_C);
+    uint8_t new_carry = value & 1;
+    uint8_t result = (uint8_t)((value >> 1) | (old_carry << 7));
+    *dest = result;
+    flags_write(cpu, result == 0, 0, 0, new_carry);
+}
+
+static void exec_cb_sla(virtual_cpu *cpu, const instr_operands *ops)
+{
+    uint8_t *dest = get_r8(cpu, ops->r8);
+    uint8_t value = *dest;
+    uint8_t carry = (value >> 7) & 1;
+    uint8_t result = (uint8_t)(value << 1);
+    *dest = result;
+    flags_write(cpu, result == 0, 0, 0, carry);
+}
+
+static void exec_cb_sra(virtual_cpu *cpu, const instr_operands *ops)
+{
+    uint8_t *dest = get_r8(cpu, ops->r8);
+    uint8_t value = *dest;
+    uint8_t carry = value & 1;
+    uint8_t msb = value & 0x80;
+    uint8_t result = (uint8_t)((value >> 1) | msb);
+    *dest = result;
+    flags_write(cpu, result == 0, 0, 0, carry);
+}
+
+static void exec_cb_swap(virtual_cpu *cpu, const instr_operands *ops)
+{
+    uint8_t *dest = get_r8(cpu, ops->r8);
+    uint8_t value = *dest;
+    uint8_t result = (uint8_t)(((value & 0x0F) << 4) | ((value >> 4) & 0x0F));
+    *dest = result;
+    flags_write(cpu, result == 0, 0, 0, 0);
+}
+
+static void exec_cb_srl(virtual_cpu *cpu, const instr_operands *ops)
+{
+    uint8_t *dest = get_r8(cpu, ops->r8);
+    uint8_t value = *dest;
+    uint8_t carry = value & 1;
+    uint8_t result = (uint8_t)(value >> 1);
+    *dest = result;
+    flags_write(cpu, result == 0, 0, 0, carry);
+}
+
 static void exec_unknown(virtual_cpu *cpu, uint8_t opcode)
 {
     (void)cpu;
@@ -593,6 +676,30 @@ void execute_instruction(virtual_cpu *cpu, const decoded_instr *instr)
         case INSTR_OR_A_IMM8:
         case INSTR_CP_A_IMM8:
             exec_alu_imm8(cpu, instr);
+            break;
+        case INSTR_CB_RLC:
+            exec_cb_rlc(cpu, &instr->ops);
+            break;
+        case INSTR_CB_RRC:
+            exec_cb_rrc(cpu, &instr->ops);
+            break;
+        case INSTR_CB_RL:
+            exec_cb_rl(cpu, &instr->ops);
+            break;
+        case INSTR_CB_RR:
+            exec_cb_rr(cpu, &instr->ops);
+            break;
+        case INSTR_CB_SLA:
+            exec_cb_sla(cpu, &instr->ops);
+            break;
+        case INSTR_CB_SRA:
+            exec_cb_sra(cpu, &instr->ops);
+            break;
+        case INSTR_CB_SWAP:
+            exec_cb_swap(cpu, &instr->ops);
+            break;
+        case INSTR_CB_SRL:
+            exec_cb_srl(cpu, &instr->ops);
             break;
         case INSTR_UNKNOWN:
             exec_unknown(cpu, cpu->code[cpu->pc]);

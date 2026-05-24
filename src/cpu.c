@@ -45,6 +45,23 @@ void fetch_execute(virtual_cpu *cpu)
 
     decoded_instr dec;
 
+    /* Handle CB prefix */
+    if (opcode == 0xCB)
+    {
+        uint8_t cb_opcode = cpu->code[cpu->pc + 1];
+
+        if (!decode_cb_opcode(cb_opcode, &dec))
+        {
+            printf("unimplemented CB opcode %d\n", cb_opcode);
+            return;
+        }
+
+        execute_instruction(cpu, &dec);
+        cpu->pc += dec.bytes;
+        cpu->cycles += dec.cycles;
+        return;
+    }
+
     if (!decode_opcode(opcode, &dec))
     {
         printf("unimplemented opcode %d\n", opcode);

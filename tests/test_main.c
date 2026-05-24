@@ -108,6 +108,35 @@ void test_cp_imm8(void);
 void test_cp_imm8_borrow(void);
 void test_cp_imm8_half_borrow(void);
 
+/* test_cpu_cb.c */
+void test_cb_rlc_b(void);
+void test_cb_rlc_zero(void);
+void test_cb_rlc_a(void);
+void test_cb_rrc_c(void);
+void test_cb_rrc_zero(void);
+void test_cb_rrc_no_carry(void);
+void test_cb_rl_d(void);
+void test_cb_rl_with_carry(void);
+void test_cb_rl_no_carry(void);
+void test_cb_rr_e(void);
+void test_cb_rr_with_carry(void);
+void test_cb_rr_no_carry(void);
+void test_cb_sla_h(void);
+void test_cb_sla_carry(void);
+void test_cb_sla_msb_set(void);
+void test_cb_sra_l(void);
+void test_cb_sra_sign_extend(void);
+void test_cb_sra_no_carry(void);
+void test_cb_swap_a(void);
+void test_cb_swap_zero(void);
+void test_cb_swap_same_nibbles(void);
+void test_cb_srl_b(void);
+void test_cb_srl_msb_cleared(void);
+void test_cb_srl_carry(void);
+void test_cb_rlc_hl(void);
+void test_cb_srl_hl(void);
+void test_cb_instruction_cycles(void);
+
 /* test_decode.c */
 void test_decode_block0(void);
 void test_decode_block1(void);
@@ -230,6 +259,34 @@ int main(void)
     RUN_TEST(test_cp_imm8);
     RUN_TEST(test_cp_imm8_borrow);
     RUN_TEST(test_cp_imm8_half_borrow);
+
+    RUN_TEST(test_cb_rlc_b);
+    RUN_TEST(test_cb_rlc_zero);
+    RUN_TEST(test_cb_rlc_a);
+    RUN_TEST(test_cb_rrc_c);
+    RUN_TEST(test_cb_rrc_zero);
+    RUN_TEST(test_cb_rrc_no_carry);
+    RUN_TEST(test_cb_rl_d);
+    RUN_TEST(test_cb_rl_with_carry);
+    RUN_TEST(test_cb_rl_no_carry);
+    RUN_TEST(test_cb_rr_e);
+    RUN_TEST(test_cb_rr_with_carry);
+    RUN_TEST(test_cb_rr_no_carry);
+    RUN_TEST(test_cb_sla_h);
+    RUN_TEST(test_cb_sla_carry);
+    RUN_TEST(test_cb_sla_msb_set);
+    RUN_TEST(test_cb_sra_l);
+    RUN_TEST(test_cb_sra_sign_extend);
+    RUN_TEST(test_cb_sra_no_carry);
+    RUN_TEST(test_cb_swap_a);
+    RUN_TEST(test_cb_swap_zero);
+    RUN_TEST(test_cb_swap_same_nibbles);
+    RUN_TEST(test_cb_srl_b);
+    RUN_TEST(test_cb_srl_msb_cleared);
+    RUN_TEST(test_cb_srl_carry);
+    RUN_TEST(test_cb_rlc_hl);
+    RUN_TEST(test_cb_srl_hl);
+    RUN_TEST(test_cb_instruction_cycles);
 
     RUN_TEST(test_decode_block0);
     RUN_TEST(test_decode_block1);

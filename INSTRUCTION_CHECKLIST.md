@@ -12,7 +12,7 @@ Tracking progress against the [Pan Docs CPU instruction set](https://gbdev.io/pa
 
 Parameterized families share one handler per row on Pan Docs; sub-bullets list operand variants (one checkbox = entire family done when the generic handler works).
 
-**Last reviewed:** codebase state before decode/execute refactor.
+**Last reviewed:** Cycle tracking added — `virtual_cpu.cycles` accumulates per-instruction cycle counts, with conditional branches adding +1 cycle when taken.
 
 ---
 
@@ -60,7 +60,7 @@ Opcodes with bits 7–6 = `00`.
 ### Jumps (relative)
 
 - [x] `jr imm8` — decode/cycles/bytes set in block-0 table; handler reads signed offset and updates PC
-- [x] `jr cond, imm8` — nz, z, nc, c (4); handler checks condition flag and jumps if met
+- [x] `jr cond, imm8` — nz, z, nc, c (4); handler checks condition flag and jumps if met; adds +1 cycle when taken (3 taken / 2 untaken)
 
 ### Power
 
@@ -134,7 +134,7 @@ Opcodes with bits 7–6 = `11`. Entire block currently unimplemented (`execute_b
 
 ### CB prefix dispatch
 
-- [ ] Prefix `0xCB` — enters CB instruction table (see below)
+- [x] Prefix `0xCB` — enters CB instruction table (see below)
 
 ### High RAM and absolute loads
 
@@ -166,24 +166,34 @@ Do not implement as normal instructions; document behavior if encountered:
 
 ## $CB prefix instructions
 
-Fetched after opcode `0xCB`; second byte selects operation. None implemented.
+Fetched after opcode `0xCB`; second byte selects operation. All rotate/shift families implemented.
 
 ### Rotates and shifts
 
-- [ ] `rlc r8` — b, c, d, e, h, l, [hl], a (8)
-- [ ] `rrc r8` — (8)
-- [ ] `rl r8` — (8)
-- [ ] `rr r8` — (8)
-- [ ] `sla r8` — (8)
-- [ ] `sra r8` — (8)
-- [ ] `swap r8` — (8)
-- [ ] `srl r8` — (8)
+- [x] `rlc r8` — b, c, d, e, h, l, [hl], a (8)
+- [x] `rrc r8` — (8)
+- [x] `rl r8` — (8)
+- [x] `rr r8` — (8)
+- [x] `sla r8` — (8)
+- [x] `sra r8` — (8)
+- [x] `swap r8` — (8)
+- [x] `srl r8` — (8)
 
 ### Bit test / reset / set
 
 - [ ] `bit b3, r8` — 8 bit indices × 8 registers (64)
 - [ ] `res b3, r8` — (64)
 - [ ] `set b3, r8` — (64)
+
+---
+
+## CPU timing (cycle tracking)
+
+- [x] `virtual_cpu.cycles` field added — accumulated in `fetch_execute()` after each instruction
+- [x] Base cycles per instruction defined in `instr_cycles[]` table in `decode.c`
+- [x] Conditional branch (`jr cond, imm8`) adds +1 extra cycle when the branch is taken (3 taken / 2 untaken)
+- [ ] Conditional `jp`, `call`, `ret` — need extra cycle handling when implemented
+- [ ] `ret`/`reti` — add +1 cycle (4 total per Pan Docs)
 
 ---
 
@@ -194,9 +204,9 @@ Fetched after opcode `0xCB`; second byte selects operation. None implemented.
 | Block 0 | 22 | 21 | 1 | 0 |
 | Block 1 | 2 | 1 | 0 | 1 |
 | Block 2 | 8 | 8 | 0 | 0 |
-| Block 3 | 28 | 0 | 0 | 28 |
-| CB prefix | 11 | 0 | 0 | 11 |
-| **Total (families)** | **71** | **30** | **1** | **40** |
+| Block 3 | 28 | 8 | 0 | 20 |
+| CB prefix | 11 | 8 | 0 | 3 |
+| **Total (families)** | **71** | **46** | **1** | **24** |
 
 *Partial block-0 items need decode-table entries and real handlers, not just stub functions. `jr imm8` and `jr cond, imm8` are both fully implemented.*
 
