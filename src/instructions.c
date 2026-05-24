@@ -327,7 +327,7 @@ static void exec_daa(virtual_cpu *cpu)
             adjustment += 0x60;
         }
         a -= adjustment;
-        flags_write(cpu, a == 0, 1, 0, 0);
+        flags_write(cpu, a == 0, 1, 0, flag_get(cpu, F_MASK_C));
     }
     else
     {

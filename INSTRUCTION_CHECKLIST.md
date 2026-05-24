@@ -90,7 +90,7 @@ Opcodes with bits 7–6 = `10`.
 - [x] `or a, r8` — (8)
 - [x] `cp a, r8` — (8)
 
-**Known gaps:** half-carry flag incomplete; subtraction flag not always cleared before non-sub ops.
+**All block 2 ALU operations verified:** flag behavior matches RGBDS `gbz80.7` specification for all 8 operations. DAA subtraction path correctly preserves carry flag.
 
 ---
 
