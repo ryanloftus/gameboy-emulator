@@ -30,6 +30,17 @@ void test_ld_r16mem_a_bc(void);
 void test_ld_a_r16mem_de(void);
 void test_ld_r16mem_hli(void);
 void test_ld_r16mem_hld(void);
+void test_jr_imm8_positive(void);
+void test_jr_imm8_negative(void);
+void test_jr_imm8_zero_offset(void);
+void test_jr_nz_taken(void);
+void test_jr_nz_not_taken(void);
+void test_jr_z_taken(void);
+void test_jr_z_not_taken(void);
+void test_jr_nc_taken(void);
+void test_jr_nc_not_taken(void);
+void test_jr_c_taken(void);
+void test_jr_c_not_taken(void);
 void test_ld_imm16_sp(void);
 
 /* test_cpu_block1.c */
@@ -87,6 +98,17 @@ int main(void)
     RUN_TEST(test_ld_a_r16mem_de);
     RUN_TEST(test_ld_r16mem_hli);
     RUN_TEST(test_ld_r16mem_hld);
+    RUN_TEST(test_jr_imm8_positive);
+    RUN_TEST(test_jr_imm8_negative);
+    RUN_TEST(test_jr_imm8_zero_offset);
+    RUN_TEST(test_jr_nz_taken);
+    RUN_TEST(test_jr_nz_not_taken);
+    RUN_TEST(test_jr_z_taken);
+    RUN_TEST(test_jr_z_not_taken);
+    RUN_TEST(test_jr_nc_taken);
+    RUN_TEST(test_jr_nc_not_taken);
+    RUN_TEST(test_jr_c_taken);
+    RUN_TEST(test_jr_c_not_taken);
     RUN_TEST(test_ld_imm16_sp);
 
     RUN_TEST(test_ld_r8_r8_bc);
