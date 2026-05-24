@@ -32,6 +32,9 @@ typedef struct virtual_cpu
         uint16_t hl;
     };
 
+    /* CPU timing */
+    uint64_t cycles;
+
     /* References */
     memory *mem;
     uint8_t *code;

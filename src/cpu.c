@@ -53,4 +53,5 @@ void fetch_execute(virtual_cpu *cpu)
 
     execute_instruction(cpu, &dec);
     cpu->pc += dec.bytes;
+    cpu->cycles += dec.cycles;
 }

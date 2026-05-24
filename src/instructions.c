@@ -398,6 +398,7 @@ static void exec_jr_cond_imm8(virtual_cpu *cpu, const instr_operands *ops)
     if (taken)
     {
         cpu->pc += offset;
+        cpu->cycles += 1; /* Extra cycle when branch is taken */
     }
 }
 
