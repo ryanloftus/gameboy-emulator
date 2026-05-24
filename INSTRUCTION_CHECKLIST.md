@@ -160,7 +160,7 @@ Opcodes with bits 7–6 = `11`. Entire block currently unimplemented (`execute_b
 
 Do not implement as normal instructions; document behavior if encountered:
 
-- [ ] Behavior defined for: `$D3`, `$DB`, `$DD`, `$E3`, `$E4`, `$EB`, `$EC`, `$ED`, `$F4`, `$FC`, `$FD`
+- [x] Behavior defined for: `$D3`, `$DB`, `$DD`, `$E3`, `$E4`, `$EB`, `$EC`, `$ED`, `$F4`, `$FC`, `$FD`
 
 ---
 
