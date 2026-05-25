@@ -237,6 +237,21 @@ void test_echo_ram_full_range_start(void);
 void test_echo_ram_full_range_end(void);
 void test_non_echo_not_affected(void);
 void test_work_ram_independent_from_echo(void);
+void test_mbc1_rom_bank_0_default_rom_mode(void);
+void test_mbc1_rom_bank_1_default(void);
+void test_mbc1_select_rom_bank_1(void);
+void test_mbc1_bank_1_wraps_zero_to_one(void);
+void test_mbc1_rom_mode_upper_bits(void);
+void test_mbc1_ram_enable_disable(void);
+void test_mbc1_external_ram_rom_mode_bank_0(void);
+void test_mbc1_external_ram_mode_switch_bank(void);
+void test_mbc1_ram_mode_maps_rom_bank_0(void);
+void test_mbc1_write_to_rom_does_not_alter_rom(void);
+void test_mbc1_switch_from_rom_to_ram_mode(void);
+void test_mbc1_mode_switch_affects_bank_0_window(void);
+void test_mbc1_rom_addr_wraps_modulo_num_banks(void);
+void test_mbc1_ram_not_allocated_returns_ff(void);
+void test_mbc1_ram_bank_wraps_modulo(void);
 
 int main(void)
 {
@@ -467,6 +482,22 @@ int main(void)
     RUN_TEST(test_echo_ram_full_range_end);
     RUN_TEST(test_non_echo_not_affected);
     RUN_TEST(test_work_ram_independent_from_echo);
+
+    RUN_TEST(test_mbc1_rom_bank_0_default_rom_mode);
+    RUN_TEST(test_mbc1_rom_bank_1_default);
+    RUN_TEST(test_mbc1_select_rom_bank_1);
+    RUN_TEST(test_mbc1_bank_1_wraps_zero_to_one);
+    RUN_TEST(test_mbc1_rom_mode_upper_bits);
+    RUN_TEST(test_mbc1_ram_enable_disable);
+    RUN_TEST(test_mbc1_external_ram_rom_mode_bank_0);
+    RUN_TEST(test_mbc1_external_ram_mode_switch_bank);
+    RUN_TEST(test_mbc1_ram_mode_maps_rom_bank_0);
+    RUN_TEST(test_mbc1_write_to_rom_does_not_alter_rom);
+    RUN_TEST(test_mbc1_switch_from_rom_to_ram_mode);
+    RUN_TEST(test_mbc1_mode_switch_affects_bank_0_window);
+    RUN_TEST(test_mbc1_rom_addr_wraps_modulo_num_banks);
+    RUN_TEST(test_mbc1_ram_not_allocated_returns_ff);
+    RUN_TEST(test_mbc1_ram_bank_wraps_modulo);
 
     return UNITY_END();
 }

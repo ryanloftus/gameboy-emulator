@@ -34,7 +34,8 @@ int main(int argc, char *argv[])
     init_memory(&mem, rom_path);
 
     virtual_cpu cpu;
-    create_virtual_cpu(&cpu, &mem, NULL);
+    create_virtual_cpu(&cpu, &mem, mem.raw);
+    cpu.pc = 0x100;
 
     int running = 1;
     SDL_Event event;
@@ -42,6 +43,8 @@ int main(int argc, char *argv[])
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) running = 0;
         }
+
+        fetch_execute(&cpu);
 
         render(&mem, frame_buffer, WIDTH, HEIGHT);
         SDL_UpdateTexture(texture, NULL, frame_buffer, WIDTH * sizeof(uint32_t));
@@ -51,6 +54,8 @@ int main(int argc, char *argv[])
 
         SDL_Delay(16);
     }
+
+    destroy_memory(&mem);
 
     SDL_DestroyTexture(texture);
     SDL_DestroyRenderer(renderer);

@@ -463,8 +463,9 @@ void test_ld_imm16_sp(void)
 {
     memory mem;
     virtual_cpu cpu;
-    uint8_t addr_lo = 0x34;
-    uint8_t addr_hi = 0x12;
+    uint16_t addr_val = WORK_RAM_START;  /* 0xC000 – valid writable RAM */
+    uint8_t addr_lo = addr_val & 0xFF;
+    uint8_t addr_hi = (addr_val >> 8) & 0xFF;
     uint8_t code[] = {0x08, addr_lo, addr_hi};
 
     cpu_test_reset(&cpu, &mem, code);
