@@ -12,7 +12,7 @@ static void reset_mem(void)
 
 void test_init_memory_zeroed(void)
 {
-    init_memory(&mem);
+    init_memory(&mem, NULL);
     for (int i = 0; i < 0x10000; i++) {
         TEST_ASSERT_EQUAL_UINT8(0, mem.raw[i]);
     }

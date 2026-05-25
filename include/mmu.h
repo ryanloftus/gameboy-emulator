@@ -2,6 +2,7 @@
 #define _MEMORY_H_
 
 #include <stdint.h>
+#include <stdlib.h>
 
 #define B_128 0x80
 #define B_256 0x100
@@ -22,8 +23,15 @@
 #define IO_REGISTERS_START 0xFF00
 #define HIGH_RAM_START 0xFF80
 
+typedef struct rom
+{
+    uint8_t *data;
+    size_t size;
+} rom;
+
 typedef struct memory
 {
+    rom rom;
     union
     {
         uint8_t raw[KB_64];
@@ -44,7 +52,7 @@ typedef struct memory
     };
 } memory;
 
-void init_memory(memory *mem);
+void init_memory(memory *mem, const char *rom_path);
 uint8_t read_memory8(memory *mem, uint16_t addr);
 uint16_t read_memory16(memory *mem, uint16_t addr);
 void write_memory8(memory *mem, uint16_t addr, uint8_t value);

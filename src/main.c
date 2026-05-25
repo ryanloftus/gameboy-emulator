@@ -2,14 +2,22 @@
 #include "mmu.h"
 #include "cpu.h"
 
+#include <stdio.h>
 #include <SDL.h>
 
 #define WIDTH 160
 #define HEIGHT 144
 #define SCALE 4
 
-int main()
+int main(int argc, char *argv[])
 {
+    if (argc < 2) {
+        fprintf(stderr, "Usage: %s <rom_file>\n", argv[0]);
+        return 1;
+    }
+
+    const char *rom_path = argv[1];
+
     SDL_Init(SDL_INIT_VIDEO);
     SDL_Window *win = SDL_CreateWindow("Test", SDL_WINDOWPOS_CENTERED,
                                        SDL_WINDOWPOS_CENTERED, WIDTH*SCALE, HEIGHT*SCALE, 0);
@@ -23,7 +31,7 @@ int main()
             frame_buffer[y*WIDTH + x] = (x ^ y) * 0x010101FF; // test pattern
 
     memory mem;
-    init_memory(&mem);
+    init_memory(&mem, rom_path);
 
     virtual_cpu cpu;
     create_virtual_cpu(&cpu, &mem, NULL);

@@ -13,7 +13,7 @@ void test_push_bc(void)
     uint8_t code[] = {0xC5};
 
     cpu_test_reset(&cpu, &mem, code);
-    init_memory(&mem);
+    init_memory(&mem, NULL);
     cpu.bc = 0x1234;
     cpu.sp = 0xFFFE;
     cpu_test_run(&cpu);
@@ -30,7 +30,7 @@ void test_push_de(void)
     uint8_t code[] = {0xD5};
 
     cpu_test_reset(&cpu, &mem, code);
-    init_memory(&mem);
+    init_memory(&mem, NULL);
     cpu.de = 0xABCD;
     cpu.sp = 0xFFF0;
     cpu_test_run(&cpu);
@@ -46,7 +46,7 @@ void test_push_hl(void)
     uint8_t code[] = {0xE5};
 
     cpu_test_reset(&cpu, &mem, code);
-    init_memory(&mem);
+    init_memory(&mem, NULL);
     cpu.hl = 0x5678;
     cpu.sp = 0xFFFE;
     cpu_test_run(&cpu);
@@ -62,7 +62,7 @@ void test_push_af(void)
     uint8_t code[] = {0xF5};
 
     cpu_test_reset(&cpu, &mem, code);
-    init_memory(&mem);
+    init_memory(&mem, NULL);
     cpu.af = 0x9AB0;
     cpu.sp = 0xFFFE;
     cpu_test_run(&cpu);
@@ -78,7 +78,7 @@ void test_pop_bc(void)
     uint8_t code[] = {0xC1};
 
     cpu_test_reset(&cpu, &mem, code);
-    init_memory(&mem);
+    init_memory(&mem, NULL);
     write_memory16(&mem, 0xFFFE, 0xABCD);
     cpu.sp = 0xFFFE;
     cpu_test_run(&cpu);
@@ -94,7 +94,7 @@ void test_pop_af_clears_lower_nibble(void)
     uint8_t code[] = {0xF1};
 
     cpu_test_reset(&cpu, &mem, code);
-    init_memory(&mem);
+    init_memory(&mem, NULL);
     write_memory16(&mem, 0xFFFE, 0xFFFE); /* F would be 0xFE if not masked */
     cpu.sp = 0xFFFE;
     cpu_test_run(&cpu);
@@ -110,7 +110,7 @@ void test_pop_af(void)
     uint8_t code[] = {0xF1};
 
     cpu_test_reset(&cpu, &mem, code);
-    init_memory(&mem);
+    init_memory(&mem, NULL);
     write_memory16(&mem, 0xFFFC, 0x9A50);
     cpu.sp = 0xFFFC;
     cpu_test_run(&cpu);
@@ -128,7 +128,7 @@ void test_ret(void)
     uint8_t code[] = {0xC9};
 
     cpu_test_reset(&cpu, &mem, code);
-    init_memory(&mem);
+    init_memory(&mem, NULL);
     write_memory16(&mem, 0xFFFE, 0x1234);
     cpu.sp = 0xFFFE;
     cpu_test_run(&cpu);
@@ -144,7 +144,7 @@ void test_ret_nz_taken(void)
     uint8_t code[] = {0xC0};
 
     cpu_test_reset(&cpu, &mem, code);
-    init_memory(&mem);
+    init_memory(&mem, NULL);
     write_memory16(&mem, 0xFFFE, 0x5678);
     cpu.sp = 0xFFFE;
     cpu.f = 0; /* Z not set */
@@ -161,7 +161,7 @@ void test_ret_nz_not_taken(void)
     uint8_t code[] = {0xC0};
 
     cpu_test_reset(&cpu, &mem, code);
-    init_memory(&mem);
+    init_memory(&mem, NULL);
     write_memory16(&mem, 0xFFFE, 0x5678);
     cpu.sp = 0xFFFE;
     cpu.f = F_Z; /* Z set -> not taken */
@@ -178,7 +178,7 @@ void test_ret_z_taken(void)
     uint8_t code[] = {0xC8};
 
     cpu_test_reset(&cpu, &mem, code);
-    init_memory(&mem);
+    init_memory(&mem, NULL);
     write_memory16(&mem, 0xFFFC, 0x9ABC);
     cpu.sp = 0xFFFC;
     cpu.f = F_Z;
@@ -194,7 +194,7 @@ void test_ret_c_taken(void)
     uint8_t code[] = {0xD8};
 
     cpu_test_reset(&cpu, &mem, code);
-    init_memory(&mem);
+    init_memory(&mem, NULL);
     write_memory16(&mem, 0xFFFE, 0x4242);
     cpu.sp = 0xFFFE;
     cpu.f = F_C;
@@ -210,7 +210,7 @@ void test_ret_nc_not_taken(void)
     uint8_t code[] = {0xD0};
 
     cpu_test_reset(&cpu, &mem, code);
-    init_memory(&mem);
+    init_memory(&mem, NULL);
     cpu.sp = 0xFFFE;
     cpu.f = F_C; /* C set -> NC not taken */
     cpu_test_run(&cpu);
@@ -312,7 +312,7 @@ void test_call(void)
     uint8_t code[] = {0xCD, 0x34, 0x12};
 
     cpu_test_reset(&cpu, &mem, code);
-    init_memory(&mem);
+    init_memory(&mem, NULL);
     cpu.sp = 0xFFFE;
     cpu_test_run(&cpu);
 
@@ -328,7 +328,7 @@ void test_call_nz_taken(void)
     uint8_t code[] = {0xC4, 0x34, 0x12};
 
     cpu_test_reset(&cpu, &mem, code);
-    init_memory(&mem);
+    init_memory(&mem, NULL);
     cpu.sp = 0xFFFE;
     cpu.f = 0;
     cpu_test_run(&cpu);
@@ -344,7 +344,7 @@ void test_call_nz_not_taken(void)
     uint8_t code[] = {0xC4, 0x34, 0x12};
 
     cpu_test_reset(&cpu, &mem, code);
-    init_memory(&mem);
+    init_memory(&mem, NULL);
     cpu.sp = 0xFFFE;
     cpu.f = F_Z;
     cpu_test_run(&cpu);
@@ -360,7 +360,7 @@ void test_call_z_taken(void)
     uint8_t code[] = {0xCC, 0x78, 0x56};
 
     cpu_test_reset(&cpu, &mem, code);
-    init_memory(&mem);
+    init_memory(&mem, NULL);
     cpu.sp = 0xFFFE;
     cpu.f = F_Z;
     cpu_test_run(&cpu);
@@ -375,7 +375,7 @@ void test_call_c_taken(void)
     uint8_t code[] = {0xDC, 0x00, 0x40};
 
     cpu_test_reset(&cpu, &mem, code);
-    init_memory(&mem);
+    init_memory(&mem, NULL);
     cpu.sp = 0xFFFE;
     cpu.f = F_C;
     cpu_test_run(&cpu);
@@ -390,7 +390,7 @@ void test_call_nc_not_taken(void)
     uint8_t code[] = {0xD4, 0x34, 0x12};
 
     cpu_test_reset(&cpu, &mem, code);
-    init_memory(&mem);
+    init_memory(&mem, NULL);
     cpu.sp = 0xFFFE;
     cpu.f = F_C;
     cpu_test_run(&cpu);
@@ -407,7 +407,7 @@ void test_rst_00(void)
     uint8_t code[] = {0xC7};
 
     cpu_test_reset(&cpu, &mem, code);
-    init_memory(&mem);
+    init_memory(&mem, NULL);
     cpu.sp = 0xFFFE;
     cpu_test_run(&cpu);
 
@@ -423,7 +423,7 @@ void test_rst_38(void)
     uint8_t code[] = {0xFF};
 
     cpu_test_reset(&cpu, &mem, code);
-    init_memory(&mem);
+    init_memory(&mem, NULL);
     cpu.sp = 0xFFFE;
     cpu_test_run(&cpu);
 
@@ -437,7 +437,7 @@ void test_rst_10(void)
     uint8_t code[] = {0xD7};
 
     cpu_test_reset(&cpu, &mem, code);
-    init_memory(&mem);
+    init_memory(&mem, NULL);
     cpu.sp = 0xFFFE;
     cpu_test_run(&cpu);
 
@@ -453,7 +453,7 @@ void test_ldh_c_a(void)
     uint8_t code[] = {0xE2};
 
     cpu_test_reset(&cpu, &mem, code);
-    init_memory(&mem);
+    init_memory(&mem, NULL);
     cpu.a = 0x42;
     cpu.c = 0x80;
     cpu_test_run(&cpu);
@@ -468,7 +468,7 @@ void test_ldh_imm8_a(void)
     uint8_t code[] = {0xE0, 0x90};
 
     cpu_test_reset(&cpu, &mem, code);
-    init_memory(&mem);
+    init_memory(&mem, NULL);
     cpu.a = 0xAA;
     cpu_test_run(&cpu);
 
@@ -482,7 +482,7 @@ void test_ld_imm16_a(void)
     uint8_t code[] = {0xEA, 0x00, 0xC0};
 
     cpu_test_reset(&cpu, &mem, code);
-    init_memory(&mem);
+    init_memory(&mem, NULL);
     cpu.a = 0x55;
     cpu_test_run(&cpu);
 
@@ -496,7 +496,7 @@ void test_ldh_a_c(void)
     uint8_t code[] = {0xF2};
 
     cpu_test_reset(&cpu, &mem, code);
-    init_memory(&mem);
+    init_memory(&mem, NULL);
     write_memory8(&mem, 0xFF80, 0x77);
     cpu.c = 0x80;
     cpu_test_run(&cpu);
@@ -511,7 +511,7 @@ void test_ldh_a_imm8(void)
     uint8_t code[] = {0xF0, 0x90};
 
     cpu_test_reset(&cpu, &mem, code);
-    init_memory(&mem);
+    init_memory(&mem, NULL);
     write_memory8(&mem, 0xFF90, 0xBB);
     cpu_test_run(&cpu);
 
@@ -525,7 +525,7 @@ void test_ld_a_imm16(void)
     uint8_t code[] = {0xFA, 0x00, 0xC0};
 
     cpu_test_reset(&cpu, &mem, code);
-    init_memory(&mem);
+    init_memory(&mem, NULL);
     write_memory8(&mem, 0xC000, 0xCC);
     cpu_test_run(&cpu);
 
@@ -711,7 +711,7 @@ void test_call_cycles(void)
     uint8_t code[] = {0xCD, 0x00, 0x80};
 
     cpu_test_reset(&cpu, &mem, code);
-    init_memory(&mem);
+    init_memory(&mem, NULL);
     cpu.sp = 0xFFFE;
     cpu_test_run(&cpu);
 
@@ -725,7 +725,7 @@ void test_ret_cycles(void)
     uint8_t code[] = {0xC9};
 
     cpu_test_reset(&cpu, &mem, code);
-    init_memory(&mem);
+    init_memory(&mem, NULL);
     write_memory16(&mem, 0xFFFE, 0x0000);
     cpu.sp = 0xFFFE;
     cpu_test_run(&cpu);
@@ -740,7 +740,7 @@ void test_push_cycles(void)
     uint8_t code[] = {0xC5};
 
     cpu_test_reset(&cpu, &mem, code);
-    init_memory(&mem);
+    init_memory(&mem, NULL);
     cpu.sp = 0xFFFE;
     cpu_test_run(&cpu);
 
@@ -754,7 +754,7 @@ void test_pop_cycles(void)
     uint8_t code[] = {0xC1};
 
     cpu_test_reset(&cpu, &mem, code);
-    init_memory(&mem);
+    init_memory(&mem, NULL);
     write_memory16(&mem, 0xFFFE, 0x0000);
     cpu.sp = 0xFFFE;
     cpu_test_run(&cpu);
@@ -769,7 +769,7 @@ void test_rst_cycles(void)
     uint8_t code[] = {0xC7};
 
     cpu_test_reset(&cpu, &mem, code);
-    init_memory(&mem);
+    init_memory(&mem, NULL);
     cpu.sp = 0xFFFE;
     cpu_test_run(&cpu);
 

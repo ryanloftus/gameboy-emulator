@@ -2,6 +2,7 @@
 #include "debug.h"
 
 #include <memory.h>
+#include <stdio.h>
 
 /**
  * Internal: redirect echo RAM (0xE000–0xFDFF) to the corresponding
@@ -21,9 +22,51 @@ static uint16_t sanitize_addr(uint16_t addr)
     return addr;
 }
 
-void init_memory(memory *mem)
+static void load_rom(rom *rom, const char *path)
+{
+    FILE *f = fopen(path, "rb");
+    if (!f) {
+        debug_assert(0 && "failed to open ROM file");
+        return;
+    }
+
+    fseek(f, 0, SEEK_END);
+    long file_size = ftell(f);
+    fseek(f, 0, SEEK_SET);
+
+    if (file_size <= 0) {
+        debug_assert(0 && "ROM file is empty");
+        fclose(f);
+        return;
+    }
+
+    rom->data = malloc((size_t)file_size);
+    if (!rom->data) {
+        debug_assert(0 && "malloc failed for ROM data");
+        fclose(f);
+        return;
+    }
+
+    size_t bytes_read = fread(rom->data, 1, (size_t)file_size, f);
+    fclose(f);
+
+    if ((long)bytes_read != file_size) {
+        debug_assert(0 && "failed to read ROM file fully");
+        free(rom->data);
+        rom->data = NULL;
+        return;
+    }
+
+    rom->size = (size_t)file_size;
+}
+
+void init_memory(memory *mem, const char *rom_path)
 {
     memset(mem, 0, sizeof(memory));
+
+    if (rom_path != NULL) {
+        load_rom(&mem->rom, rom_path);
+    }
 }
 
 uint8_t read_memory8(memory *mem, uint16_t addr)

@@ -17,7 +17,7 @@ static inline void cpu_test_reset(virtual_cpu *cpu, memory *mem, uint8_t *code)
 {
     if (mem != NULL)
     {
-        init_memory(mem);
+        init_memory(mem, NULL);
     }
     create_virtual_cpu(cpu, mem, code);
 }
