@@ -621,14 +621,15 @@ void test_ld_sp_hl(void)
 void test_di_clears_ime(void)
 {
     virtual_cpu cpu;
+    memory mem;
     uint8_t code[] = {0xF3};
 
-    cpu_test_reset(&cpu, NULL, code);
-    cpu.ime = 1;
+    cpu_test_reset(&cpu, &mem, code);
+    write_memory8(&mem, 0xFFFF, 1); /* Set IME */
     cpu.ei_scheduled = 1;
     cpu_test_run(&cpu);
 
-    TEST_ASSERT_EQUAL_UINT8(0, cpu.ime);
+    TEST_ASSERT_EQUAL_UINT8(0, read_memory8(&mem, 0xFFFF));
     TEST_ASSERT_EQUAL_UINT8(0, cpu.ei_scheduled);
     TEST_ASSERT_EQUAL_UINT16(1, cpu.pc);
 }
@@ -636,20 +637,21 @@ void test_di_clears_ime(void)
 void test_ei_schedules_ime(void)
 {
     virtual_cpu cpu;
+    memory mem;
     uint8_t code[] = {0xFB, 0x00}; /* EI, NOP */
 
-    cpu_test_reset(&cpu, NULL, code);
-    cpu.ime = 0;
+    cpu_test_reset(&cpu, &mem, code);
+    write_memory8(&mem, 0xFFFF, 0); /* Clear IME */
     cpu_test_run(&cpu); /* EI — schedules but does not set ime yet */
 
     TEST_ASSERT_EQUAL_UINT8(1, cpu.ei_scheduled);
-    TEST_ASSERT_EQUAL_UINT8(0, cpu.ime); /* not yet enabled */
+    TEST_ASSERT_EQUAL_UINT8(0, read_memory8(&mem, 0xFFFF)); /* not yet enabled */
     TEST_ASSERT_EQUAL_UINT16(1, cpu.pc);
 
     cpu_test_run(&cpu); /* NOP — ime should be applied before this executes */
 
     TEST_ASSERT_EQUAL_UINT8(0, cpu.ei_scheduled);
-    TEST_ASSERT_EQUAL_UINT8(1, cpu.ime); /* now enabled */
+    TEST_ASSERT_EQUAL_UINT8(1, read_memory8(&mem, 0xFFFF)); /* now enabled */
     TEST_ASSERT_EQUAL_UINT16(2, cpu.pc);
 }
 
@@ -662,15 +664,18 @@ void test_reti_returns_and_enables_ime(void)
     uint8_t code[] = {0xD9};
 
     cpu_test_reset(&cpu, &mem, code);
-    init_memory(&mem);
-    write_memory16(&mem, 0xFFFE, 0xABCD);
-    cpu.sp = 0xFFFE;
-    cpu.ime = 0;
+    /* Use a stack address that doesn't overlap with 0xFFFF (IME/IE register).
+       Write the return address at separate byte locations to avoid
+       overwriting 0xFFFF with the high byte. */
+    write_memory8(&mem, 0xFFFC, 0xCD); /* low byte of return addr */
+    write_memory8(&mem, 0xFFFD, 0xAB); /* high byte of return addr */
+    cpu.sp = 0xFFFC;
+    write_memory8(&mem, 0xFFFF, 0); /* Clear IME */
     cpu_test_run(&cpu);
 
     TEST_ASSERT_EQUAL_UINT16(0xABCD, cpu.pc);
-    TEST_ASSERT_EQUAL_UINT16(0x0000 | (0xFFFE + 2), cpu.sp);
-    TEST_ASSERT_EQUAL_UINT8(1, cpu.ime);
+    TEST_ASSERT_EQUAL_UINT16(0x0000 | (0xFFFC + 2), cpu.sp);
+    TEST_ASSERT_EQUAL_UINT8(1, read_memory8(&mem, 0xFFFF));
     TEST_ASSERT_EQUAL_UINT8(0, cpu.ei_scheduled);
 }
 

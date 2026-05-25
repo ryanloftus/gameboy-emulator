@@ -43,7 +43,7 @@ void fetch_execute(virtual_cpu *cpu)
        the next instruction (this is the "one instruction delay") */
     if (cpu->ei_scheduled)
     {
-        cpu->ime = 1;
+        write_memory8(cpu->mem, 0xFFFF, 1);
         cpu->ei_scheduled = 0;
     }
 

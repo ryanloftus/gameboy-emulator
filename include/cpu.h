@@ -35,11 +35,10 @@ typedef struct virtual_cpu
     /* CPU timing */
     uint64_t cycles;
 
-    /* Interrupt Master Enable flag */
-    /* DI clears this immediately. EI sets it with a one-instruction delay
-       (the enable is scheduled for after the next instruction completes). */
-    uint8_t ime;
+    /* EI one-instruction delay scheduling flag */
     uint8_t ei_scheduled; /* non-zero when EI has been executed but not yet taken effect */
+    /* Note: The Interrupt Master Enable (IME) flag is stored at memory
+       address 0xFFFF (the interrupt_enable_register in the memory struct). */
 
     /* CPU state flags */
     uint8_t is_halted;

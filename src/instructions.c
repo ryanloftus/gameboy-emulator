@@ -427,7 +427,7 @@ static void exec_halt(virtual_cpu *cpu)
 {
     uint8_t pending = get_interrupt_pending(cpu);
 
-    if (cpu->ime)
+    if (read_memory8(cpu->mem, 0xFFFF))
     {
         /* IME set: enter low-power mode until an interrupt is about to be serviced */
         cpu->is_halted = 1;
@@ -669,7 +669,7 @@ static void exec_reti(virtual_cpu *cpu)
 {
     exec_ret(cpu);
     /* RETI enables interrupts immediately (no one-instruction delay like EI) */
-    cpu->ime = 1;
+    write_memory8(cpu->mem, 0xFFFF, 1);
     cpu->ei_scheduled = 0;
 }
 
@@ -834,7 +834,7 @@ static void exec_ld_sp_hl(virtual_cpu *cpu)
 
 static void exec_di(virtual_cpu *cpu)
 {
-    cpu->ime = 0;
+    write_memory8(cpu->mem, 0xFFFF, 0);
     cpu->ei_scheduled = 0; /* Cancel any pending EI */
 }
 
