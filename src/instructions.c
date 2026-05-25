@@ -574,6 +574,273 @@ static void exec_cb_srl(virtual_cpu *cpu, const instr_operands *ops)
     flags_write(cpu, result == 0, 0, 0, carry);
 }
 
+/* ===== Block 3: Stack operations ===== */
+
+static uint16_t *get_r16stk(virtual_cpu *cpu, uint8_t r16stk_id)
+{
+    switch (r16stk_id)
+    {
+        case 0: return &cpu->bc;
+        case 1: return &cpu->de;
+        case 2: return &cpu->hl;
+        case 3: return &cpu->af;
+        default: debug_assert(0); return NULL;
+    }
+}
+
+static void exec_push(virtual_cpu *cpu, const instr_operands *ops)
+{
+    debug_assert(cpu->mem != NULL);
+    cpu->sp -= 2;
+    write_memory16(cpu->mem, cpu->sp, *get_r16stk(cpu, ops->r16stk));
+}
+
+static void exec_pop(virtual_cpu *cpu, const instr_operands *ops)
+{
+    debug_assert(cpu->mem != NULL);
+    uint16_t value = read_memory16(cpu->mem, cpu->sp);
+    cpu->sp += 2;
+    *get_r16stk(cpu, ops->r16stk) = value;
+    /* POP AF clears the lower nibble of F (bits 0-3 forced to 0) */
+    if (ops->r16stk == 3)
+    {
+        cpu->f &= 0xF0;
+    }
+}
+
+/* ===== Block 3: Returns ===== */
+
+static void exec_ret(virtual_cpu *cpu)
+{
+    debug_assert(cpu->mem != NULL);
+    cpu->pc = read_memory16(cpu->mem, cpu->sp);
+    cpu->sp += 2;
+    /* fetch_execute adds bytes (1) after execution, so subtract 1 */
+    cpu->pc -= 1;
+}
+
+static void exec_ret_cond(virtual_cpu *cpu, const instr_operands *ops)
+{
+    int taken = 0;
+    switch (ops->cond)
+    {
+        case 0: taken = !flag_get(cpu, F_MASK_Z); break;
+        case 1: taken = flag_get(cpu, F_MASK_Z);  break;
+        case 2: taken = !flag_get(cpu, F_MASK_C); break;
+        case 3: taken = flag_get(cpu, F_MASK_C);  break;
+        default: debug_assert(0); break;
+    }
+    if (taken)
+    {
+        exec_ret(cpu);
+        cpu->cycles += 1; /* conditional taken: +1 cycle */
+    }
+}
+
+static void exec_reti(virtual_cpu *cpu)
+{
+    exec_ret(cpu);
+    /* RETI enables interrupts immediately (no one-instruction delay like EI) */
+    cpu->ime = 1;
+    cpu->ei_scheduled = 0;
+}
+
+/* ===== Block 3: Jumps ===== */
+
+static void exec_jp(virtual_cpu *cpu)
+{
+    uint16_t addr = cpu->code[cpu->pc + 1] | ((uint16_t)cpu->code[cpu->pc + 2] << 8);
+    cpu->pc = addr;
+    /* fetch_execute adds bytes (3) after execution, so subtract 3 */
+    cpu->pc -= 3;
+}
+
+static void exec_jp_cond(virtual_cpu *cpu, const instr_operands *ops)
+{
+    uint16_t addr = cpu->code[cpu->pc + 1] | ((uint16_t)cpu->code[cpu->pc + 2] << 8);
+    int taken = 0;
+    switch (ops->cond)
+    {
+        case 0: taken = !flag_get(cpu, F_MASK_Z); break;
+        case 1: taken = flag_get(cpu, F_MASK_Z);  break;
+        case 2: taken = !flag_get(cpu, F_MASK_C); break;
+        case 3: taken = flag_get(cpu, F_MASK_C);  break;
+        default: debug_assert(0); break;
+    }
+    if (taken)
+    {
+        cpu->pc = addr;
+        /* fetch_execute adds bytes (3) after execution, so subtract 3 */
+        cpu->pc -= 3;
+        cpu->cycles += 1; /* conditional taken: +1 cycle */
+    }
+}
+
+static void exec_jp_hl(virtual_cpu *cpu)
+{
+    cpu->pc = cpu->hl;
+    /* fetch_execute adds bytes (1) after execution, so subtract 1 */
+    cpu->pc -= 1;
+}
+
+/* ===== Block 3: Calls ===== */
+
+static void exec_call(virtual_cpu *cpu)
+{
+    debug_assert(cpu->mem != NULL);
+    uint16_t addr = cpu->code[cpu->pc + 1] | ((uint16_t)cpu->code[cpu->pc + 2] << 8);
+    cpu->sp -= 2;
+    write_memory16(cpu->mem, cpu->sp, cpu->pc + 3); /* return address = after 3-byte instruction */
+    cpu->pc = addr;
+    /* fetch_execute adds bytes (3) after execution, so subtract 3 */
+    cpu->pc -= 3;
+}
+
+static void exec_call_cond(virtual_cpu *cpu, const instr_operands *ops)
+{
+    uint16_t addr = cpu->code[cpu->pc + 1] | ((uint16_t)cpu->code[cpu->pc + 2] << 8);
+    int taken = 0;
+    switch (ops->cond)
+    {
+        case 0: taken = !flag_get(cpu, F_MASK_Z); break;
+        case 1: taken = flag_get(cpu, F_MASK_Z);  break;
+        case 2: taken = !flag_get(cpu, F_MASK_C); break;
+        case 3: taken = flag_get(cpu, F_MASK_C);  break;
+        default: debug_assert(0); break;
+    }
+    if (taken)
+    {
+        debug_assert(cpu->mem != NULL);
+        cpu->sp -= 2;
+        write_memory16(cpu->mem, cpu->sp, cpu->pc + 3);
+        cpu->pc = addr;
+        /* fetch_execute adds bytes (3) after execution, so subtract 3 */
+        cpu->pc -= 3;
+        cpu->cycles += 1; /* conditional taken: +1 cycle */
+    }
+}
+
+/* ===== Block 3: RST ===== */
+
+static void exec_rst(virtual_cpu *cpu, const instr_operands *ops)
+{
+    debug_assert(cpu->mem != NULL);
+    static const uint16_t rst_vectors[] = {0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38};
+    cpu->sp -= 2;
+    write_memory16(cpu->mem, cpu->sp, cpu->pc + 1); /* return address = after 1-byte instruction */
+    cpu->pc = rst_vectors[ops->tgt3];
+    /* fetch_execute adds bytes (1) after execution, so subtract 1 */
+    cpu->pc -= 1;
+}
+
+/* ===== Block 3: High RAM and absolute loads ===== */
+
+static void exec_ldh_c_a(virtual_cpu *cpu)
+{
+    debug_assert(cpu->mem != NULL);
+    write_memory8(cpu->mem, 0xFF00 + cpu->c, cpu->a);
+}
+
+static void exec_ldh_imm8_a(virtual_cpu *cpu)
+{
+    debug_assert(cpu->mem != NULL);
+    uint8_t offset = cpu->code[cpu->pc + 1];
+    write_memory8(cpu->mem, 0xFF00 + offset, cpu->a);
+}
+
+static void exec_ld_imm16_a(virtual_cpu *cpu)
+{
+    debug_assert(cpu->mem != NULL);
+    uint16_t addr = cpu->code[cpu->pc + 1] | ((uint16_t)cpu->code[cpu->pc + 2] << 8);
+    write_memory8(cpu->mem, addr, cpu->a);
+}
+
+static void exec_ldh_a_c(virtual_cpu *cpu)
+{
+    debug_assert(cpu->mem != NULL);
+    cpu->a = read_memory8(cpu->mem, 0xFF00 + cpu->c);
+}
+
+static void exec_ldh_a_imm8(virtual_cpu *cpu)
+{
+    debug_assert(cpu->mem != NULL);
+    uint8_t offset = cpu->code[cpu->pc + 1];
+    cpu->a = read_memory8(cpu->mem, 0xFF00 + offset);
+}
+
+static void exec_ld_a_imm16(virtual_cpu *cpu)
+{
+    debug_assert(cpu->mem != NULL);
+    uint16_t addr = cpu->code[cpu->pc + 1] | ((uint16_t)cpu->code[cpu->pc + 2] << 8);
+    cpu->a = read_memory8(cpu->mem, addr);
+}
+
+/* ===== Block 3: SP/HL arithmetic ===== */
+
+static void exec_add_sp_imm8(virtual_cpu *cpu)
+{
+    int8_t offset = (int8_t)cpu->code[cpu->pc + 1];
+    uint16_t sp = cpu->sp;
+    uint16_t result = sp + offset;
+    cpu->sp = result;
+    flags_write(cpu, 0, 0, ((sp & 0x0F) + ((uint8_t)offset & 0x0F)) > 0x0F,
+                ((sp & 0xFF) + (uint8_t)offset) > 0xFF);
+}
+
+static void exec_ld_hl_sp_plus_imm8(virtual_cpu *cpu)
+{
+    int8_t offset = (int8_t)cpu->code[cpu->pc + 1];
+    uint16_t sp = cpu->sp;
+    uint16_t result = sp + offset;
+    cpu->hl = result;
+    flags_write(cpu, 0, 0, ((sp & 0x0F) + ((uint8_t)offset & 0x0F)) > 0x0F,
+                ((sp & 0xFF) + (uint8_t)offset) > 0xFF);
+}
+
+static void exec_ld_sp_hl(virtual_cpu *cpu)
+{
+    cpu->sp = cpu->hl;
+}
+
+/* ===== Block 3: Interrupt enable ===== */
+
+static void exec_di(virtual_cpu *cpu)
+{
+    cpu->ime = 0;
+    cpu->ei_scheduled = 0; /* Cancel any pending EI */
+}
+
+static void exec_ei(virtual_cpu *cpu)
+{
+    /* EI takes effect after the *next* instruction — schedule it */
+    cpu->ei_scheduled = 1;
+}
+
+/* ===== CB prefix: BIT, RES, SET ===== */
+
+static void exec_cb_bit(virtual_cpu *cpu, const instr_operands *ops)
+{
+    uint8_t value = *get_r8(cpu, ops->r8);
+    uint8_t bit = ops->bit;
+    uint8_t bit_set = (value >> bit) & 1;
+    /* BIT: Z = complement of bit, N = 0, H = 1, C unchanged */
+    flags_write(cpu, bit_set == 0, 0, 1, flag_get(cpu, F_MASK_C));
+}
+
+static void exec_cb_res(virtual_cpu *cpu, const instr_operands *ops)
+{
+    uint8_t *dest = get_r8(cpu, ops->r8);
+    uint8_t bit = ops->bit;
+    *dest = *dest & (uint8_t)(~(1u << bit));
+}
+
+static void exec_cb_set(virtual_cpu *cpu, const instr_operands *ops)
+{
+    uint8_t *dest = get_r8(cpu, ops->r8);
+    uint8_t bit = ops->bit;
+    *dest = *dest | (uint8_t)(1u << bit);
+}
+
 static void exec_unknown(virtual_cpu *cpu, uint8_t opcode)
 {
     (void)cpu;
@@ -700,6 +967,98 @@ void execute_instruction(virtual_cpu *cpu, const decoded_instr *instr)
             break;
         case INSTR_CB_SRL:
             exec_cb_srl(cpu, &instr->ops);
+            break;
+        case INSTR_CB_BIT:
+            exec_cb_bit(cpu, &instr->ops);
+            break;
+        case INSTR_CB_RES:
+            exec_cb_res(cpu, &instr->ops);
+            break;
+        case INSTR_CB_SET:
+            exec_cb_set(cpu, &instr->ops);
+            break;
+        /* Block 3: Stack */
+        case INSTR_PUSH:
+            exec_push(cpu, &instr->ops);
+            break;
+        case INSTR_POP:
+            exec_pop(cpu, &instr->ops);
+            break;
+        /* Block 3: Returns */
+        case INSTR_RET_NZ:
+        case INSTR_RET_Z:
+        case INSTR_RET_NC:
+        case INSTR_RET_C:
+            exec_ret_cond(cpu, &instr->ops);
+            break;
+        case INSTR_RET:
+            exec_ret(cpu);
+            break;
+        case INSTR_RETI:
+            exec_reti(cpu);
+            break;
+        /* Block 3: Jumps */
+        case INSTR_JP_NZ:
+        case INSTR_JP_Z:
+        case INSTR_JP_NC:
+        case INSTR_JP_C:
+            exec_jp_cond(cpu, &instr->ops);
+            break;
+        case INSTR_JP:
+            exec_jp(cpu);
+            break;
+        case INSTR_JP_HL:
+            exec_jp_hl(cpu);
+            break;
+        /* Block 3: Calls */
+        case INSTR_CALL_NZ:
+        case INSTR_CALL_Z:
+        case INSTR_CALL_NC:
+        case INSTR_CALL_C:
+            exec_call_cond(cpu, &instr->ops);
+            break;
+        case INSTR_CALL:
+            exec_call(cpu);
+            break;
+        /* Block 3: RST */
+        case INSTR_RST:
+            exec_rst(cpu, &instr->ops);
+            break;
+        /* Block 3: High RAM and absolute loads */
+        case INSTR_LDH_C_A:
+            exec_ldh_c_a(cpu);
+            break;
+        case INSTR_LDH_IMM8_A:
+            exec_ldh_imm8_a(cpu);
+            break;
+        case INSTR_LD_IMM16_A:
+            exec_ld_imm16_a(cpu);
+            break;
+        case INSTR_LDH_A_C:
+            exec_ldh_a_c(cpu);
+            break;
+        case INSTR_LDH_A_IMM8:
+            exec_ldh_a_imm8(cpu);
+            break;
+        case INSTR_LD_A_IMM16:
+            exec_ld_a_imm16(cpu);
+            break;
+        /* Block 3: SP/HL arithmetic */
+        case INSTR_ADD_SP_IMM8:
+            exec_add_sp_imm8(cpu);
+            break;
+        case INSTR_LD_HL_SP_PLUS_IMM8:
+            exec_ld_hl_sp_plus_imm8(cpu);
+            break;
+        case INSTR_LD_SP_HL:
+            exec_ld_sp_hl(cpu);
+            break;
+        /* Block 3: Interrupt enable */
+        case INSTR_DI:
+            exec_di(cpu);
+            break;
+        case INSTR_EI:
+            exec_ei(cpu);
             break;
         case INSTR_UNKNOWN:
             exec_unknown(cpu, cpu->code[cpu->pc]);

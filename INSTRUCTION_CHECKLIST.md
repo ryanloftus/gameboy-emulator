@@ -96,7 +96,7 @@ Opcodes with bits 7–6 = `10`.
 
 ## Block 3
 
-Opcodes with bits 7–6 = `11`. Entire block currently unimplemented (`execute_block_three_instruction` stub).
+Opcodes with bits 7–6 = `11`. All Block 3 instructions implemented.
 
 ### 8-bit ALU with immediate
 
@@ -111,26 +111,26 @@ Opcodes with bits 7–6 = `11`. Entire block currently unimplemented (`execute_b
 
 ### Returns and conditional returns
 
-- [ ] `ret cond` — nz, z, nc, c (4)
-- [ ] `ret`
-- [ ] `reti`
+- [x] `ret cond` — nz, z, nc, c (4)
+- [x] `ret`
+- [x] `reti`
 
 ### Jumps and calls
 
-- [ ] `jp cond, imm16` — nz, z, nc, c (4)
-- [ ] `jp imm16`
-- [ ] `jp hl`
-- [ ] `call cond, imm16` — nz, z, nc, c (4)
-- [ ] `call imm16`
+- [x] `jp cond, imm16` — nz, z, nc, c (4)
+- [x] `jp imm16`
+- [x] `jp hl`
+- [x] `call cond, imm16` — nz, z, nc, c (4)
+- [x] `call imm16`
 
 ### Restart
 
-- [ ] `rst tgt3` — $00, $08, $10, $18, $20, $28, $30, $38 (8)
+- [x] `rst tgt3` — $00, $08, $10, $18, $20, $28, $30, $38 (8)
 
 ### Stack (16-bit push/pop)
 
-- [ ] `pop r16stk` — bc, de, hl, af (4)
-- [ ] `push r16stk` — bc, de, hl, af (4)
+- [x] `pop r16stk` — bc, de, hl, af (4)
+- [x] `push r16stk` — bc, de, hl, af (4)
 
 ### CB prefix dispatch
 
@@ -138,23 +138,23 @@ Opcodes with bits 7–6 = `11`. Entire block currently unimplemented (`execute_b
 
 ### High RAM and absolute loads
 
-- [ ] `ldh [c], a`
-- [ ] `ldh [imm8], a`
-- [ ] `ld [imm16], a`
-- [ ] `ldh a, [c]`
-- [ ] `ldh a, [imm8]`
-- [ ] `ld a, [imm16]`
+- [x] `ldh [c], a`
+- [x] `ldh [imm8], a`
+- [x] `ld [imm16], a`
+- [x] `ldh a, [c]`
+- [x] `ldh a, [imm8]`
+- [x] `ld a, [imm16]`
 
 ### SP/HL arithmetic
 
-- [ ] `add sp, imm8`
-- [ ] `ld hl, sp + imm8`
-- [ ] `ld sp, hl`
+- [x] `add sp, imm8`
+- [x] `ld hl, sp + imm8`
+- [x] `ld sp, hl`
 
 ### Interrupt enable
 
-- [ ] `di`
-- [ ] `ei`
+- [x] `di`
+- [x] `ei`
 
 ### Invalid opcodes (hardware lock-up)
 
@@ -181,9 +181,9 @@ Fetched after opcode `0xCB`; second byte selects operation. All rotate/shift fam
 
 ### Bit test / reset / set
 
-- [ ] `bit b3, r8` — 8 bit indices × 8 registers (64)
-- [ ] `res b3, r8` — (64)
-- [ ] `set b3, r8` — (64)
+- [x] `bit b3, r8` — 8 bit indices × 8 registers (64)
+- [x] `res b3, r8` — (64)
+- [x] `set b3, r8` — (64)
 
 ---
 
@@ -192,8 +192,8 @@ Fetched after opcode `0xCB`; second byte selects operation. All rotate/shift fam
 - [x] `virtual_cpu.cycles` field added — accumulated in `fetch_execute()` after each instruction
 - [x] Base cycles per instruction defined in `instr_cycles[]` table in `decode.c`
 - [x] Conditional branch (`jr cond, imm8`) adds +1 extra cycle when the branch is taken (3 taken / 2 untaken)
-- [ ] Conditional `jp`, `call`, `ret` — need extra cycle handling when implemented
-- [ ] `ret`/`reti` — add +1 cycle (4 total per Pan Docs)
+- [x] Conditional `jp`, `call`, `ret` — add +1 extra cycle when taken (3 taken / 2 untaken for `jp`, `call`; 3 taken / 2 untaken for `ret`)
+- [x] `ret`/`reti` — 4 cycles (unconditional)
 
 ---
 
@@ -204,9 +204,9 @@ Fetched after opcode `0xCB`; second byte selects operation. All rotate/shift fam
 | Block 0 | 22 | 21 | 1 | 0 |
 | Block 1 | 2 | 1 | 0 | 1 |
 | Block 2 | 8 | 8 | 0 | 0 |
-| Block 3 | 28 | 8 | 0 | 20 |
-| CB prefix | 11 | 8 | 0 | 3 |
-| **Total (families)** | **71** | **46** | **1** | **24** |
+| Block 3 | 28 | 28 | 0 | 0 |
+| CB prefix | 11 | 11 | 0 | 0 |
+| **Total (families)** | **71** | **69** | **1** | **1** |
 
 *Partial block-0 items need decode-table entries and real handlers, not just stub functions. `jr imm8` and `jr cond, imm8` are both fully implemented.*
 

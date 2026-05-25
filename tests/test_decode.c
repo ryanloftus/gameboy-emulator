@@ -117,7 +117,24 @@ void test_decode_block3_alu_imm8(void)
 
 void test_decode_block3_unknown(void)
 {
+    /* All 256 CB opcodes are valid, so no unknown CB case.
+       Test specific block 3 decodes instead. */
+
+    /* RST 0x38 (opcode 0xFF) */
     decoded_instr dec;
-    TEST_ASSERT_FALSE(decode_opcode(0xFF, &dec));
-    TEST_ASSERT_EQUAL_INT(INSTR_UNKNOWN, dec.id);
+    TEST_ASSERT_TRUE(decode_opcode(0xFF, &dec));
+    TEST_ASSERT_EQUAL_INT(INSTR_RST, dec.id);
+    TEST_ASSERT_EQUAL_UINT8(7, dec.ops.tgt3); /* RST 0x38 */
+
+    /* RST 0x00 (opcode 0xC7) */
+    TEST_ASSERT_TRUE(decode_opcode(0xC7, &dec));
+    TEST_ASSERT_EQUAL_INT(INSTR_RST, dec.id);
+    TEST_ASSERT_EQUAL_UINT8(0, dec.ops.tgt3); /* RST 0x00 */
+
+    /* CB prefix SET 7, A (opcode 0xFF in CB space: bits 7-6=11=SET, bits 5-3=111=bit7, bits 2-0=111=A) */
+    decoded_instr cb_dec;
+    TEST_ASSERT_TRUE(decode_cb_opcode(0xFF, &cb_dec));
+    TEST_ASSERT_EQUAL_INT(INSTR_CB_SET, cb_dec.id);
+    TEST_ASSERT_EQUAL_UINT8(7, cb_dec.ops.r8); /* A register */
+    TEST_ASSERT_EQUAL_UINT8(7, cb_dec.ops.bit); /* bit 7 */
 }

@@ -55,6 +55,49 @@ typedef enum
     INSTR_CB_SRA,
     INSTR_CB_SWAP,
     INSTR_CB_SRL,
+    /* CB prefix bit test / reset / set */
+    INSTR_CB_BIT,
+    INSTR_CB_RES,
+    INSTR_CB_SET,
+    /* Block 3: returns */
+    INSTR_RET_NZ,
+    INSTR_RET_Z,
+    INSTR_RET_NC,
+    INSTR_RET_C,
+    INSTR_RET,
+    INSTR_RETI,
+    /* Block 3: jumps */
+    INSTR_JP_NZ,
+    INSTR_JP_Z,
+    INSTR_JP_NC,
+    INSTR_JP_C,
+    INSTR_JP,
+    INSTR_JP_HL,
+    /* Block 3: calls */
+    INSTR_CALL_NZ,
+    INSTR_CALL_Z,
+    INSTR_CALL_NC,
+    INSTR_CALL_C,
+    INSTR_CALL,
+    /* Block 3: restarts */
+    INSTR_RST,
+    /* Block 3: stack */
+    INSTR_POP,
+    INSTR_PUSH,
+    /* Block 3: high RAM and absolute loads */
+    INSTR_LDH_C_A,
+    INSTR_LDH_IMM8_A,
+    INSTR_LD_IMM16_A,
+    INSTR_LDH_A_C,
+    INSTR_LDH_A_IMM8,
+    INSTR_LD_A_IMM16,
+    /* Block 3: SP/HL arithmetic */
+    INSTR_ADD_SP_IMM8,
+    INSTR_LD_HL_SP_PLUS_IMM8,
+    INSTR_LD_SP_HL,
+    /* Block 3: interrupt enable */
+    INSTR_DI,
+    INSTR_EI,
     INSTR_UNKNOWN,
     INSTR_COUNT
 } instr_id;
@@ -62,11 +105,15 @@ typedef enum
 typedef struct
 {
     uint8_t r8;
+    uint16_t imm16;
     uint8_t r16;
     uint8_t r8_src;
     uint8_t r8_dest;
     uint8_t alu_op;
     uint8_t cond;
+    uint8_t r16stk; /* stack pair: 0=BC, 1=DE, 2=HL, 3=AF */
+    uint8_t tgt3;   /* RST vector index (0-7 -> 0x00,0x08...0x38) */
+    uint8_t bit;    /* Bit index for BIT/RES/SET (0-7) */
 } instr_operands;
 
 typedef struct

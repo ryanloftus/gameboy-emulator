@@ -397,6 +397,336 @@ void test_cb_srl_hl(void)
     assert_flags(&cpu, 1, 0, 0, 1);
 }
 
+/* === BIT b3, r8 — Test bit (Z = !bit, N=0, H=1, C unchanged) === */
+
+/* BIT 0, B — bit 0 set */
+void test_cb_bit_0_b_set(void)
+{
+    virtual_cpu cpu;
+    uint8_t code[] = {0xCB, 0x40}; /* BIT 0, B */
+
+    cpu_test_reset(&cpu, NULL, code);
+    cpu.b = 0x01; /* bit 0 = 1 */
+    cpu.f = F_C;
+    cpu_test_run(&cpu);
+
+    TEST_ASSERT_EQUAL_UINT8(0x01, cpu.b); /* value unchanged */
+    assert_flags(&cpu, 0, 0, 1, 1); /* Z=0 (bit set), N=0, H=1, C unchanged */
+}
+
+/* BIT 0, B — bit 0 clear */
+void test_cb_bit_0_b_clear(void)
+{
+    virtual_cpu cpu;
+    uint8_t code[] = {0xCB, 0x40}; /* BIT 0, B */
+
+    cpu_test_reset(&cpu, NULL, code);
+    cpu.b = 0xFE; /* bit 0 = 0 */
+    cpu.f = 0;
+    cpu_test_run(&cpu);
+
+    TEST_ASSERT_EQUAL_UINT8(0xFE, cpu.b); /* value unchanged */
+    assert_flags(&cpu, 1, 0, 1, 0); /* Z=1 (bit clear), N=0, H=1, C unchanged */
+}
+
+/* BIT 3, C */
+void test_cb_bit_3_c_set(void)
+{
+    virtual_cpu cpu;
+    uint8_t code[] = {0xCB, 0x59}; /* BIT 3, C (0x59 = 01 011 001) */
+
+    cpu_test_reset(&cpu, NULL, code);
+    cpu.c = 0x08; /* bit 3 = 1 */
+    cpu.f = 0;
+    cpu_test_run(&cpu);
+
+    assert_flags(&cpu, 0, 0, 1, 0);
+}
+
+void test_cb_bit_3_c_clear(void)
+{
+    virtual_cpu cpu;
+    uint8_t code[] = {0xCB, 0x59}; /* BIT 3, C */
+
+    cpu_test_reset(&cpu, NULL, code);
+    cpu.c = 0xF7; /* bit 3 = 0 */
+    cpu.f = F_C;
+    cpu_test_run(&cpu);
+
+    assert_flags(&cpu, 1, 0, 1, 1);
+}
+
+/* BIT 7, A — most significant bit */
+void test_cb_bit_7_a_set(void)
+{
+    virtual_cpu cpu;
+    uint8_t code[] = {0xCB, 0x7F}; /* BIT 7, A (0x7F = 01 111 111) */
+
+    cpu_test_reset(&cpu, NULL, code);
+    cpu.a = 0x80;
+    cpu.f = 0;
+    cpu_test_run(&cpu);
+
+    assert_flags(&cpu, 0, 0, 1, 0);
+}
+
+void test_cb_bit_7_a_clear(void)
+{
+    virtual_cpu cpu;
+    uint8_t code[] = {0xCB, 0x7F}; /* BIT 7, A */
+
+    cpu_test_reset(&cpu, NULL, code);
+    cpu.a = 0x7F;
+    cpu.f = F_Z | F_N | F_H | F_C;
+    cpu_test_run(&cpu);
+
+    assert_flags(&cpu, 1, 0, 1, 1); /* Z=1 (bit clear), N=0, H=1, C unchanged (1) */
+}
+
+/* BIT with [HL] (memory operand) */
+void test_cb_bit_0_hl_set(void)
+{
+    virtual_cpu cpu;
+    memory mem;
+    uint8_t code[] = {0xCB, 0x46}; /* BIT 0, [HL] (0x46 = 01 000 110) */
+
+    cpu_test_reset(&cpu, &mem, code);
+    write_memory8(&mem, 0xC000, 0x01);
+    cpu.hl = 0xC000;
+    cpu.f = 0;
+    cpu_test_run(&cpu);
+
+    assert_flags(&cpu, 0, 0, 1, 0); /* Z=0 (bit set) */
+}
+
+void test_cb_bit_0_hl_clear(void)
+{
+    virtual_cpu cpu;
+    memory mem;
+    uint8_t code[] = {0xCB, 0x46}; /* BIT 0, [HL] */
+
+    cpu_test_reset(&cpu, &mem, code);
+    write_memory8(&mem, 0xC000, 0x00);
+    cpu.hl = 0xC000;
+    cpu.f = F_C;
+    cpu_test_run(&cpu);
+
+    assert_flags(&cpu, 1, 0, 1, 1); /* Z=1 (bit clear), C unchanged */
+}
+
+/* === RES b3, r8 — Reset (clear) bit (flags unchanged) === */
+
+/* RES 0, B — clear bit 0 */
+void test_cb_res_0_b(void)
+{
+    virtual_cpu cpu;
+    uint8_t code[] = {0xCB, 0x80}; /* RES 0, B (0x80 = 10 000 000) */
+
+    cpu_test_reset(&cpu, NULL, code);
+    cpu.b = 0xFF;
+    cpu.f = 0xFF;
+    cpu_test_run(&cpu);
+
+    TEST_ASSERT_EQUAL_UINT8(0xFE, cpu.b); /* bit 0 cleared */
+    assert_flags_unchanged(&cpu, 0xFF);
+}
+
+/* RES 0, B — already clear */
+void test_cb_res_0_b_already_clear(void)
+{
+    virtual_cpu cpu;
+    uint8_t code[] = {0xCB, 0x80}; /* RES 0, B */
+
+    cpu_test_reset(&cpu, NULL, code);
+    cpu.b = 0x00;
+    cpu.f = 0;
+    cpu_test_run(&cpu);
+
+    TEST_ASSERT_EQUAL_UINT8(0x00, cpu.b);
+    assert_flags_unchanged(&cpu, 0);
+}
+
+/* RES 3, C */
+void test_cb_res_3_c(void)
+{
+    virtual_cpu cpu;
+    uint8_t code[] = {0xCB, 0x99}; /* RES 3, C (0x99 = 10 011 001) */
+
+    cpu_test_reset(&cpu, NULL, code);
+    cpu.c = 0xFF;
+    cpu.f = F_Z | F_N | F_H | F_C;
+    cpu_test_run(&cpu);
+
+    TEST_ASSERT_EQUAL_UINT8(0xF7, cpu.c); /* bit 3 cleared */
+    assert_flags_unchanged(&cpu, F_Z | F_N | F_H | F_C);
+}
+
+/* RES 7, A — clear msb */
+void test_cb_res_7_a(void)
+{
+    virtual_cpu cpu;
+    uint8_t code[] = {0xCB, 0xBF}; /* RES 7, A (0xBF = 10 111 111) */
+
+    cpu_test_reset(&cpu, NULL, code);
+    cpu.a = 0x80;
+    cpu.f = F_C;
+    cpu_test_run(&cpu);
+
+    TEST_ASSERT_EQUAL_UINT8(0x00, cpu.a);
+    assert_flags_unchanged(&cpu, F_C);
+}
+
+/* RES with [HL] (memory) */
+void test_cb_res_0_hl(void)
+{
+    virtual_cpu cpu;
+    memory mem;
+    uint8_t code[] = {0xCB, 0x86}; /* RES 0, [HL] (0x86 = 10 000 110) */
+
+    cpu_test_reset(&cpu, &mem, code);
+    write_memory8(&mem, 0xC000, 0xFF);
+    cpu.hl = 0xC000;
+    cpu.f = F_Z | F_N | F_H | F_C;
+    cpu_test_run(&cpu);
+
+    TEST_ASSERT_EQUAL_UINT8(0xFE, read_memory8(&mem, 0xC000));
+    assert_flags_unchanged(&cpu, F_Z | F_N | F_H | F_C);
+}
+
+/* === SET b3, r8 — Set bit (flags unchanged) === */
+
+/* SET 0, B — set bit 0 */
+void test_cb_set_0_b(void)
+{
+    virtual_cpu cpu;
+    uint8_t code[] = {0xCB, 0xC0}; /* SET 0, B (0xC0 = 11 000 000) */
+
+    cpu_test_reset(&cpu, NULL, code);
+    cpu.b = 0x00;
+    cpu.f = 0xFF;
+    cpu_test_run(&cpu);
+
+    TEST_ASSERT_EQUAL_UINT8(0x01, cpu.b); /* bit 0 set */
+    assert_flags_unchanged(&cpu, 0xFF);
+}
+
+/* SET 0, B — already set */
+void test_cb_set_0_b_already_set(void)
+{
+    virtual_cpu cpu;
+    uint8_t code[] = {0xCB, 0xC0}; /* SET 0, B */
+
+    cpu_test_reset(&cpu, NULL, code);
+    cpu.b = 0x01;
+    cpu.f = 0;
+    cpu_test_run(&cpu);
+
+    TEST_ASSERT_EQUAL_UINT8(0x01, cpu.b);
+    assert_flags_unchanged(&cpu, 0);
+}
+
+/* SET 3, C */
+void test_cb_set_3_c(void)
+{
+    virtual_cpu cpu;
+    uint8_t code[] = {0xCB, 0xD9}; /* SET 3, C (0xD9 = 11 011 001) */
+
+    cpu_test_reset(&cpu, NULL, code);
+    cpu.c = 0x00;
+    cpu.f = F_Z | F_N | F_H | F_C;
+    cpu_test_run(&cpu);
+
+    TEST_ASSERT_EQUAL_UINT8(0x08, cpu.c); /* bit 3 set */
+    assert_flags_unchanged(&cpu, F_Z | F_N | F_H | F_C);
+}
+
+/* SET 7, A — set msb */
+void test_cb_set_7_a(void)
+{
+    virtual_cpu cpu;
+    uint8_t code[] = {0xCB, 0xFF}; /* SET 7, A (0xFF = 11 111 111) */
+
+    cpu_test_reset(&cpu, NULL, code);
+    cpu.a = 0x00;
+    cpu.f = F_C;
+    cpu_test_run(&cpu);
+
+    TEST_ASSERT_EQUAL_UINT8(0x80, cpu.a);
+    assert_flags_unchanged(&cpu, F_C);
+}
+
+/* SET 5, L */
+void test_cb_set_5_l(void)
+{
+    virtual_cpu cpu;
+    uint8_t code[] = {0xCB, 0xED}; /* SET 5, L (0xED = 11 101 101) */
+
+    cpu_test_reset(&cpu, NULL, code);
+    cpu.l = 0x00;
+    cpu.f = 0;
+    cpu_test_run(&cpu);
+
+    TEST_ASSERT_EQUAL_UINT8(0x20, cpu.l); /* bit 5 set */
+    assert_flags_unchanged(&cpu, 0);
+}
+
+/* SET with [HL] (memory) */
+void test_cb_set_0_hl(void)
+{
+    virtual_cpu cpu;
+    memory mem;
+    uint8_t code[] = {0xCB, 0xC6}; /* SET 0, [HL] (0xC6 = 11 000 110) */
+
+    cpu_test_reset(&cpu, &mem, code);
+    write_memory8(&mem, 0xC000, 0x00);
+    cpu.hl = 0xC000;
+    cpu.f = F_Z | F_N | F_H | F_C;
+    cpu_test_run(&cpu);
+
+    TEST_ASSERT_EQUAL_UINT8(0x01, read_memory8(&mem, 0xC000));
+    assert_flags_unchanged(&cpu, F_Z | F_N | F_H | F_C);
+}
+
+/* === BIT/RES/SET cycles and PC advance === */
+void test_cb_bit_instruction_cycles(void)
+{
+    virtual_cpu cpu;
+    uint8_t code[] = {0xCB, 0x40}; /* BIT 0, B */
+
+    cpu_test_reset(&cpu, NULL, code);
+    cpu.b = 0x00;
+    cpu_test_run(&cpu);
+
+    TEST_ASSERT_EQUAL_UINT16(2, cpu.pc);
+    TEST_ASSERT_EQUAL_UINT64(2, cpu.cycles);
+}
+
+void test_cb_res_instruction_cycles(void)
+{
+    virtual_cpu cpu;
+    uint8_t code[] = {0xCB, 0x80}; /* RES 0, B */
+
+    cpu_test_reset(&cpu, NULL, code);
+    cpu.b = 0xFF;
+    cpu_test_run(&cpu);
+
+    TEST_ASSERT_EQUAL_UINT16(2, cpu.pc);
+    TEST_ASSERT_EQUAL_UINT64(2, cpu.cycles);
+}
+
+void test_cb_set_instruction_cycles(void)
+{
+    virtual_cpu cpu;
+    uint8_t code[] = {0xCB, 0xC0}; /* SET 0, B */
+
+    cpu_test_reset(&cpu, NULL, code);
+    cpu.b = 0x00;
+    cpu_test_run(&cpu);
+
+    TEST_ASSERT_EQUAL_UINT16(2, cpu.pc);
+    TEST_ASSERT_EQUAL_UINT64(2, cpu.cycles);
+}
+
 /* === Cycles and PC advance === */
 void test_cb_instruction_cycles(void)
 {

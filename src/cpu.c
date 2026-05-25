@@ -39,6 +39,14 @@ void fetch_execute(virtual_cpu *cpu)
     debug_assert(cpu != NULL);
     debug_assert(cpu->code != NULL);
 
+    /* Apply delayed EI: if EI was scheduled, enable IME now at the start of
+       the next instruction (this is the "one instruction delay") */
+    if (cpu->ei_scheduled)
+    {
+        cpu->ime = 1;
+        cpu->ei_scheduled = 0;
+    }
+
     uint8_t opcode = cpu->code[cpu->pc];
 
     debug_assert(!is_invalid_opcode(opcode));
