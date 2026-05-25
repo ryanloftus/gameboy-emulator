@@ -404,8 +404,7 @@ static void exec_jr_cond_imm8(virtual_cpu *cpu, const instr_operands *ops)
 
 static void exec_stop(virtual_cpu *cpu)
 {
-    (void)cpu;
-    printf("not implemented\n");
+    cpu->is_stopped = 1;
 }
 
 static void exec_ld_r8_r8(virtual_cpu *cpu, const instr_operands *ops)
@@ -413,10 +412,39 @@ static void exec_ld_r8_r8(virtual_cpu *cpu, const instr_operands *ops)
     *get_r8(cpu, ops->r8_dest) = *get_r8(cpu, ops->r8_src);
 }
 
+static uint8_t get_interrupt_pending(virtual_cpu *cpu)
+{
+    if (cpu->mem == NULL)
+    {
+        return 0;
+    }
+    uint8_t ie = read_memory8(cpu->mem, 0xFFFF);
+    uint8_t iflag = read_memory8(cpu->mem, 0xFF0F);
+    return ie & iflag;
+}
+
 static void exec_halt(virtual_cpu *cpu)
 {
-    (void)cpu;
-    printf("halt instruction not implemented\n");
+    uint8_t pending = get_interrupt_pending(cpu);
+
+    if (cpu->ime)
+    {
+        /* IME set: enter low-power mode until an interrupt is about to be serviced */
+        cpu->is_halted = 1;
+    }
+    else if (pending)
+    {
+        /* IME not set, but interrupt pending: HALT bug — PC is NOT incremented,
+         * and the byte after HALT is read twice */
+        cpu->pc -= 1; /* Cancel the PC advance that fetch_execute will do */
+        /* is_halted stays 0 — CPU continues execution immediately */
+    }
+    else
+    {
+        /* IME not set, no pending interrupts: enter low-power mode, but resume
+         * as soon as an interrupt becomes pending (handler is NOT called) */
+        cpu->is_halted = 1;
+    }
 }
 
 static void exec_alu(virtual_cpu *cpu, const instr_operands *ops)

@@ -41,6 +41,10 @@ typedef struct virtual_cpu
     uint8_t ime;
     uint8_t ei_scheduled; /* non-zero when EI has been executed but not yet taken effect */
 
+    /* CPU state flags */
+    uint8_t is_halted;
+    uint8_t is_stopped;
+
     /* References */
     memory *mem;
     uint8_t *code;

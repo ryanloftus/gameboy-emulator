@@ -219,6 +219,13 @@ void test_decode_block2(void);
 void test_decode_block3_alu_imm8(void);
 void test_decode_block3_unknown(void);
 
+/* test_cpu_halt_stop.c */
+void test_halt_sets_is_halted_ime_set(void);
+void test_halt_sets_is_halted_ime_not_set_no_pending(void);
+void test_halt_no_ime_pending_interrupt_pc_bug(void);
+void test_stop_sets_is_stopped(void);
+void test_stop_ignores_second_byte(void);
+
 /* test_mmu.c */
 void test_init_memory_zeroed(void);
 void test_write_read_memory8(void);
@@ -442,6 +449,13 @@ int main(void)
     RUN_TEST(test_decode_block2);
     RUN_TEST(test_decode_block3_alu_imm8);
     RUN_TEST(test_decode_block3_unknown);
+
+    /* HALT/STOP tests */
+    RUN_TEST(test_halt_sets_is_halted_ime_set);
+    RUN_TEST(test_halt_sets_is_halted_ime_not_set_no_pending);
+    RUN_TEST(test_halt_no_ime_pending_interrupt_pc_bug);
+    RUN_TEST(test_stop_sets_is_stopped);
+    RUN_TEST(test_stop_ignores_second_byte);
 
     RUN_TEST(test_init_memory_zeroed);
     RUN_TEST(test_write_read_memory8);
