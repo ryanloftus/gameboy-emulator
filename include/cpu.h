@@ -46,10 +46,9 @@ typedef struct virtual_cpu
 
     /* References */
     memory *mem;
-    uint8_t *code;
 } virtual_cpu;
 
-void create_virtual_cpu(virtual_cpu *cpu, memory *mem, uint8_t *code);
+void create_virtual_cpu(virtual_cpu *cpu, memory *mem);
 void fetch_execute(virtual_cpu *cpu);
 
 #endif

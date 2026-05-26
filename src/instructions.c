@@ -241,12 +241,12 @@ static void exec_add_hl_r16(virtual_cpu *cpu, const instr_operands *ops)
 static void exec_ld_r16_imm16(virtual_cpu *cpu, const instr_operands *ops)
 {
     uint16_t *r16 = get_r16(cpu, ops->r16);
-    *r16 = cpu->code[cpu->pc + 1] | ((uint16_t)cpu->code[cpu->pc + 2] << 8);
+    *r16 = read_memory16(cpu->mem, cpu->pc + 1);
 }
 
 static void exec_ld_r8_imm8(virtual_cpu *cpu, const instr_operands *ops)
 {
-    *get_r8(cpu, ops->r8) = cpu->code[cpu->pc + 1];
+    *get_r8(cpu, ops->r8) = read_memory8(cpu->mem, cpu->pc + 1);
 }
 
 static void exec_ld_r16mem_a(virtual_cpu *cpu, const instr_operands *ops)
@@ -273,7 +273,7 @@ static void exec_ld_imm16_sp(virtual_cpu *cpu)
 {
     debug_assert(cpu->mem != NULL);
 
-    uint16_t addr = cpu->code[cpu->pc + 1] | ((uint16_t)cpu->code[cpu->pc + 2] << 8);
+    uint16_t addr = read_memory16(cpu->mem, cpu->pc + 1);
     write_memory16(cpu->mem, addr, cpu->sp);
 }
 
@@ -367,13 +367,13 @@ static void exec_ccf(virtual_cpu *cpu)
 
 static void exec_jr_imm8(virtual_cpu *cpu)
 {
-    int8_t offset = (int8_t)cpu->code[cpu->pc + 1];
+    int8_t offset = (int8_t)read_memory8(cpu->mem, cpu->pc + 1);
     cpu->pc += offset;
 }
 
 static void exec_jr_cond_imm8(virtual_cpu *cpu, const instr_operands *ops)
 {
-    int8_t offset = (int8_t)cpu->code[cpu->pc + 1];
+    int8_t offset = (int8_t)read_memory8(cpu->mem, cpu->pc + 1);
     int taken = 0;
 
     switch (ops->cond)
@@ -485,7 +485,7 @@ static void exec_alu(virtual_cpu *cpu, const instr_operands *ops)
 
 static void exec_alu_imm8(virtual_cpu *cpu, const decoded_instr *instr)
 {
-    uint8_t operand = cpu->code[cpu->pc + 1];
+    uint8_t operand = read_memory8(cpu->mem, cpu->pc + 1);
 
     switch (instr->id)
     {
@@ -677,7 +677,7 @@ static void exec_reti(virtual_cpu *cpu)
 
 static void exec_jp(virtual_cpu *cpu)
 {
-    uint16_t addr = cpu->code[cpu->pc + 1] | ((uint16_t)cpu->code[cpu->pc + 2] << 8);
+    uint16_t addr = read_memory16(cpu->mem, cpu->pc + 1);
     cpu->pc = addr;
     /* fetch_execute adds bytes (3) after execution, so subtract 3 */
     cpu->pc -= 3;
@@ -685,7 +685,7 @@ static void exec_jp(virtual_cpu *cpu)
 
 static void exec_jp_cond(virtual_cpu *cpu, const instr_operands *ops)
 {
-    uint16_t addr = cpu->code[cpu->pc + 1] | ((uint16_t)cpu->code[cpu->pc + 2] << 8);
+    uint16_t addr = read_memory16(cpu->mem, cpu->pc + 1);
     int taken = 0;
     switch (ops->cond)
     {
@@ -716,7 +716,7 @@ static void exec_jp_hl(virtual_cpu *cpu)
 static void exec_call(virtual_cpu *cpu)
 {
     debug_assert(cpu->mem != NULL);
-    uint16_t addr = cpu->code[cpu->pc + 1] | ((uint16_t)cpu->code[cpu->pc + 2] << 8);
+    uint16_t addr = read_memory16(cpu->mem, cpu->pc + 1);
     cpu->sp -= 2;
     write_memory16(cpu->mem, cpu->sp, cpu->pc + 3); /* return address = after 3-byte instruction */
     cpu->pc = addr;
@@ -726,7 +726,7 @@ static void exec_call(virtual_cpu *cpu)
 
 static void exec_call_cond(virtual_cpu *cpu, const instr_operands *ops)
 {
-    uint16_t addr = cpu->code[cpu->pc + 1] | ((uint16_t)cpu->code[cpu->pc + 2] << 8);
+    uint16_t addr = read_memory16(cpu->mem, cpu->pc + 1);
     int taken = 0;
     switch (ops->cond)
     {
@@ -772,14 +772,14 @@ static void exec_ldh_c_a(virtual_cpu *cpu)
 static void exec_ldh_imm8_a(virtual_cpu *cpu)
 {
     debug_assert(cpu->mem != NULL);
-    uint8_t offset = cpu->code[cpu->pc + 1];
+    uint8_t offset = read_memory8(cpu->mem, cpu->pc + 1);
     write_memory8(cpu->mem, 0xFF00 + offset, cpu->a);
 }
 
 static void exec_ld_imm16_a(virtual_cpu *cpu)
 {
     debug_assert(cpu->mem != NULL);
-    uint16_t addr = cpu->code[cpu->pc + 1] | ((uint16_t)cpu->code[cpu->pc + 2] << 8);
+    uint16_t addr = read_memory16(cpu->mem, cpu->pc + 1);
     write_memory8(cpu->mem, addr, cpu->a);
 }
 
@@ -792,14 +792,14 @@ static void exec_ldh_a_c(virtual_cpu *cpu)
 static void exec_ldh_a_imm8(virtual_cpu *cpu)
 {
     debug_assert(cpu->mem != NULL);
-    uint8_t offset = cpu->code[cpu->pc + 1];
+    uint8_t offset = read_memory8(cpu->mem, cpu->pc + 1);
     cpu->a = read_memory8(cpu->mem, 0xFF00 + offset);
 }
 
 static void exec_ld_a_imm16(virtual_cpu *cpu)
 {
     debug_assert(cpu->mem != NULL);
-    uint16_t addr = cpu->code[cpu->pc + 1] | ((uint16_t)cpu->code[cpu->pc + 2] << 8);
+    uint16_t addr = read_memory16(cpu->mem, cpu->pc + 1);
     cpu->a = read_memory8(cpu->mem, addr);
 }
 
@@ -807,7 +807,7 @@ static void exec_ld_a_imm16(virtual_cpu *cpu)
 
 static void exec_add_sp_imm8(virtual_cpu *cpu)
 {
-    int8_t offset = (int8_t)cpu->code[cpu->pc + 1];
+    int8_t offset = (int8_t)read_memory8(cpu->mem, cpu->pc + 1);
     uint16_t sp = cpu->sp;
     uint16_t result = sp + offset;
     cpu->sp = result;
@@ -817,7 +817,7 @@ static void exec_add_sp_imm8(virtual_cpu *cpu)
 
 static void exec_ld_hl_sp_plus_imm8(virtual_cpu *cpu)
 {
-    int8_t offset = (int8_t)cpu->code[cpu->pc + 1];
+    int8_t offset = (int8_t)read_memory8(cpu->mem, cpu->pc + 1);
     uint16_t sp = cpu->sp;
     uint16_t result = sp + offset;
     cpu->hl = result;
@@ -878,6 +878,9 @@ static void exec_unknown(virtual_cpu *cpu, uint8_t opcode)
 
 void execute_instruction(virtual_cpu *cpu, const decoded_instr *instr)
 {
+    debug_assert(cpu != NULL);
+    debug_assert(instr != NULL);
+
     switch (instr->id)
     {
         case INSTR_NOP:
@@ -1089,7 +1092,7 @@ void execute_instruction(virtual_cpu *cpu, const decoded_instr *instr)
             exec_ei(cpu);
             break;
         case INSTR_UNKNOWN:
-            exec_unknown(cpu, cpu->code[cpu->pc]);
+            exec_unknown(cpu, read_memory16(cpu->mem, cpu->pc));
             break;
         default:
             debug_assert(0);

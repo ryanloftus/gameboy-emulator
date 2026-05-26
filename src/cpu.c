@@ -6,11 +6,10 @@
 #include <stdio.h>
 #include <string.h>
 
-void create_virtual_cpu(virtual_cpu *cpu, memory *mem, uint8_t *code)
+void create_virtual_cpu(virtual_cpu *cpu, memory *mem)
 {
     memset(cpu, 0, sizeof(virtual_cpu));
     cpu->mem = mem;
-    cpu->code = code;
 }
 
 /* Opcodes that should hard-lock the CPU if encountered */
@@ -37,7 +36,7 @@ static bool is_invalid_opcode(uint8_t opcode)
 void fetch_execute(virtual_cpu *cpu)
 {
     debug_assert(cpu != NULL);
-    debug_assert(cpu->code != NULL);
+    debug_assert(cpu->mem != NULL);
 
     /* Apply delayed EI: if EI was scheduled, enable IME now at the start of
        the next instruction (this is the "one instruction delay") */
@@ -47,7 +46,7 @@ void fetch_execute(virtual_cpu *cpu)
         cpu->ei_scheduled = 0;
     }
 
-    uint8_t opcode = cpu->code[cpu->pc];
+    uint8_t opcode = read_memory8(cpu->mem, cpu->pc);
 
     debug_assert(!is_invalid_opcode(opcode));
 
@@ -56,7 +55,7 @@ void fetch_execute(virtual_cpu *cpu)
     /* Handle CB prefix */
     if (opcode == 0xCB)
     {
-        uint8_t cb_opcode = cpu->code[cpu->pc + 1];
+        uint8_t cb_opcode = read_memory8(cpu->mem, cpu->pc + 1);
 
         if (!decode_cb_opcode(cb_opcode, &dec))
         {
@@ -75,6 +74,8 @@ void fetch_execute(virtual_cpu *cpu)
         printf("unimplemented opcode %d\n", opcode);
         return;
     }
+
+    printf("executing instr %d\n", dec.id);
 
     execute_instruction(cpu, &dec);
     cpu->pc += dec.bytes;

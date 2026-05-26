@@ -19,7 +19,7 @@ int main(int argc, char *argv[])
     const char *rom_path = argv[1];
 
     SDL_Init(SDL_INIT_VIDEO);
-    SDL_Window *win = SDL_CreateWindow("Test", SDL_WINDOWPOS_CENTERED,
+    SDL_Window *win = SDL_CreateWindow("ryanloftus/gameboy-emulator", SDL_WINDOWPOS_CENTERED,
                                        SDL_WINDOWPOS_CENTERED, WIDTH*SCALE, HEIGHT*SCALE, 0);
     SDL_Renderer *renderer = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED);
     SDL_Texture *texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888,
@@ -34,7 +34,7 @@ int main(int argc, char *argv[])
     init_memory(&mem, rom_path);
 
     virtual_cpu cpu;
-    create_virtual_cpu(&cpu, &mem, mem.raw);
+    create_virtual_cpu(&cpu, &mem);
     cpu.pc = 0x100;
 
     int running = 1;
@@ -44,6 +44,7 @@ int main(int argc, char *argv[])
             if (event.type == SDL_QUIT) running = 0;
         }
 
+        printf("cpu: %x\n", cpu.pc);
         fetch_execute(&cpu);
 
         render(&mem, frame_buffer, WIDTH, HEIGHT);
