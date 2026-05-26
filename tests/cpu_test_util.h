@@ -13,14 +13,47 @@
 #define F_H 0x20u
 #define F_C 0x10u
 
-static inline void cpu_test_reset(virtual_cpu *cpu, memory *mem, uint8_t *code)
+/*
+ * Internal fallback memory used when a test passes NULL for the memory
+ * parameter.  Tests run sequentially so a single global is safe.
+ */
+static memory g_test_fallback_mem;
+
+static inline void cpu_test_do_reset(virtual_cpu *cpu, memory *mem, const uint8_t *code, size_t code_len)
 {
-    if (mem != NULL)
+    memory *actual = mem ? mem : &g_test_fallback_mem;
+    init_memory(actual, NULL);
+    create_virtual_cpu(cpu, actual);
+
+    /*
+     * Wire the cartridge ROM pointer to the raw memory array and set
+     * MBC type 0 (no mapper, linear access) so that is_cartridge_backed_addr
+     * reads (0x0000–0x7FFF) return bytes directly from the array.
+     * Tests that need real cartridge behaviour (e.g. MBC1 tests) override
+     * this before calling cpu_test_run().
+     */
+    actual->cartridge.rom = actual->raw;
+    actual->cartridge.rom_size = KB_64;
+    actual->cartridge.mbc_type = 0;
+
+    if (code != NULL && code_len > 0)
     {
-        init_memory(mem, NULL);
+        cpu->pc = 0;
+        memcpy(actual->raw, code, code_len);
     }
-    create_virtual_cpu(cpu, mem);
 }
+
+/**
+ * Macro: initialise a virtual CPU and write the test code into work RAM.
+ *
+ * @param cpu   pointer to a virtual_cpu
+ * @param mem   pointer to a memory, or NULL to use a static fallback
+ * @param code  a uint8_t array (its size is captured via sizeof at the
+ *              macro call site, so it must be a local/global array, not
+ *              a pointer)
+ */
+#define cpu_test_reset(cpu, mem, code)                              \
+    cpu_test_do_reset((cpu), (mem), (code), sizeof(code))
 
 static inline void cpu_test_run(virtual_cpu *cpu)
 {
