@@ -1,22 +1,40 @@
 #include "ppu.h"
 #include "mmu.h"
 #include "cpu.h"
+#include "debug.h"
 
 #include <stdio.h>
+#include <string.h>
 #include <SDL.h>
 
 #define WIDTH 160
 #define HEIGHT 144
 #define SCALE 4
 
+/* One Game Boy frame is 154 scanlines × 456 T-cycles = 70224 T-cycles */
+#define CYCLES_PER_FRAME 70224
+
 int main(int argc, char *argv[])
 {
-    if (argc < 2) {
-        fprintf(stderr, "Usage: %s <rom_file>\n", argv[0]);
+    /* Parse flags before positional arguments */
+    g_debug_mode = false;
+    int rom_arg = 1;
+    for (int i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "--debug") == 0) {
+            g_debug_mode = true;
+            rom_arg = i + 1;
+        } else {
+            rom_arg = i;
+            break;
+        }
+    }
+
+    if (rom_arg >= argc) {
+        fprintf(stderr, "Usage: %s [--debug] <rom_file>\n", argv[0]);
         return 1;
     }
 
-    const char *rom_path = argv[1];
+    const char *rom_path = argv[rom_arg];
 
     SDL_Init(SDL_INIT_VIDEO);
     SDL_Window *win = SDL_CreateWindow("ryanloftus/gameboy-emulator", SDL_WINDOWPOS_CENTERED,
@@ -37,6 +55,8 @@ int main(int argc, char *argv[])
     create_virtual_cpu(&cpu, &mem);
     cpu.pc = 0x100;
 
+    uint64_t next_vblank = CYCLES_PER_FRAME;
+
     int running = 1;
     SDL_Event event;
     while (running) {
@@ -44,16 +64,22 @@ int main(int argc, char *argv[])
             if (event.type == SDL_QUIT) running = 0;
         }
 
-        printf("cpu: %x\n", cpu.pc);
-        fetch_execute(&cpu);
+        /* Run CPU instructions until we reach the next VBlank boundary */
+        while (cpu.cycles < next_vblank) {
+            fetch_execute(&cpu);
+        }
+        next_vblank += CYCLES_PER_FRAME;
 
+        /* Render the completed frame */
         render(&mem, frame_buffer, WIDTH, HEIGHT);
+
+        /* Signal VBlank interrupt (IF bit 0) — occurs ~59.7 times a second */
+        mem.io_registers[(IF_REG_ADDR) & 0xFF] |= 0x01;
+
         SDL_UpdateTexture(texture, NULL, frame_buffer, WIDTH * sizeof(uint32_t));
         SDL_RenderClear(renderer);
         SDL_RenderCopy(renderer, texture, NULL, NULL);
         SDL_RenderPresent(renderer);
-
-        SDL_Delay(16);
     }
 
     destroy_memory(&mem);

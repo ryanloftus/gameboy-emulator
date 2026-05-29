@@ -14,6 +14,74 @@ static const uint16_t tima_thresholds[] = {
     256     /* 11: 16384 Hz */
 };
 
+/** Interrupt vector addresses */
+#define INT_VBLANK  0x40
+#define INT_LCDC    0x48
+#define INT_TIMER   0x50
+#define INT_SERIAL  0x58
+#define INT_JOYPAD  0x60
+
+/* Priority order for interrupt servicing (bit position -> vector) */
+static const uint8_t int_bits[] = { 0, 1, 2, 3, 4 };
+static const uint16_t int_vectors[] = { INT_VBLANK, INT_LCDC, INT_TIMER, INT_SERIAL, INT_JOYPAD };
+
+/**
+ * Service the highest-priority pending interrupt if IME is set.
+ * Clears the corresponding IF bit, clears IME (0xFFFF), and pushes
+ * the current PC to the stack before jumping to the vector address.
+ * Also wakes the CPU from halt.
+ *
+ * Returns 1 if an interrupt was serviced, 0 otherwise.
+ */
+static uint8_t service_interrupts(virtual_cpu *cpu)
+{
+    memory *mem = cpu->mem;
+
+    uint8_t ie = mem->interrupt_enable_register;
+    if (ie == 0) {
+        return 0;
+    }
+
+    uint8_t iflag = mem->io_registers[IF_REG_ADDR & 0xFF];
+    uint8_t pending = ie & iflag;
+
+    if (pending == 0) {
+        return 0;
+    }
+
+    /* Wake from halt */
+    cpu->is_halted = 0;
+
+    /* Find the highest-priority pending interrupt (lowest bit = highest priority) */
+    uint8_t bit;
+    for (bit = 0; bit < 5; bit++) {
+        if (pending & (1u << int_bits[bit])) {
+            break;
+        }
+    }
+    if (bit >= 5) {
+        return 0; /* should not happen */
+    }
+
+    /* Clear the IF bit for this interrupt */
+    iflag &= (uint8_t)~(1u << int_bits[bit]);
+    mem->io_registers[IF_REG_ADDR & 0xFF] = iflag;
+
+    /* Disable IME */
+    mem->interrupt_enable_register = 0;
+    cpu->ei_scheduled = 0;
+
+    /* Push PC onto stack */
+    cpu->sp -= 2;
+    write_memory8(mem, cpu->sp,     cpu->pc & 0xFF);
+    write_memory8(mem, cpu->sp + 1, cpu->pc >> 8);
+
+    /* Jump to interrupt vector */
+    cpu->pc = int_vectors[bit];
+
+    return 1;
+}
+
 void update_timers(virtual_cpu *cpu, uint16_t cycles_elapsed)
 {
     memory *mem = cpu->mem;
@@ -84,6 +152,27 @@ void fetch_execute(virtual_cpu *cpu)
         cpu->ei_scheduled = 0;
     }
 
+    /* Service interrupts: if IME is set and there's a pending interrupt,
+     * push PC, jump to vector, and wake from halt. This consumes the
+     * instruction slot (no normal instruction is executed). */
+    if (service_interrupts(cpu)) {
+        /* 5-cycle "M1" for interrupt servicing — account for it */
+        cpu->cycles += 5;
+        /* No timers update here — timers are updated when the *next*
+         * fetch_execute runs; the 5 M-cycles will be accounted then */
+        return;
+    }
+
+    /* If halted and no interrupt was serviced, skip instruction execution.
+     * The CPU just "nops" through cycles until an interrupt un-halts it. */
+    if (cpu->is_halted) {
+        /* Each fetch_execute call while halted consumes 1 M-cycle worth
+         * of time so timers still advance */
+        cpu->cycles += 1;
+        update_timers(cpu, 1);
+        return;
+    }
+
     uint8_t opcode = read_memory8(cpu->mem, cpu->pc);
 
     debug_assert(!is_invalid_opcode(opcode));
@@ -114,7 +203,9 @@ void fetch_execute(virtual_cpu *cpu)
         return;
     }
 
-    printf("executing instr %d\n", dec.id);
+    if (g_debug_mode) {
+        printf("executing instr %d\n", dec.id);
+    }
 
     execute_instruction(cpu, &dec);
     cpu->pc += dec.bytes;

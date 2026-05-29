@@ -226,6 +226,23 @@ void test_halt_no_ime_pending_interrupt_pc_bug(void);
 void test_stop_sets_is_stopped(void);
 void test_stop_ignores_second_byte(void);
 
+/* test_interrupts.c */
+void test_timer_interrupt_fires_on_overflow(void);
+void test_timer_interrupt_does_not_fire_when_ie_bit2_clear(void);
+void test_timer_interrupt_does_not_fire_when_ie_is_zero(void);
+void test_timer_interrupt_vectors_to_0x50(void);
+void test_ie_cleared_after_interrupt(void);
+void test_timer_interrupt_clears_if_bit2_preserves_others(void);
+void test_halt_exited_by_timer_interrupt(void);
+void test_halt_persists_without_interrupt(void);
+void test_vblank_has_higher_priority_than_timer(void);
+void test_lcdc_has_higher_priority_than_timer(void);
+void test_timer_overflow_sets_if_then_next_cycle_services_it(void);
+void test_timer_overflow_with_tma_reload_triggers_interrupt(void);
+void test_timer_interrupt_consumes_cycles(void);
+void test_timer_interrupt_pushes_correct_pc(void);
+void test_timer_interrupt_clears_only_own_if_bit(void);
+
 /* test_timers.c */
 void test_div_starts_at_zero(void);
 void test_div_increments_every_256_cycles(void);
@@ -483,6 +500,23 @@ int main(void)
     RUN_TEST(test_decode_block2);
     RUN_TEST(test_decode_block3_alu_imm8);
     RUN_TEST(test_decode_block3_unknown);
+
+    /* Interrupt tests */
+    RUN_TEST(test_timer_interrupt_fires_on_overflow);
+    RUN_TEST(test_timer_interrupt_does_not_fire_when_ie_bit2_clear);
+    RUN_TEST(test_timer_interrupt_does_not_fire_when_ie_is_zero);
+    RUN_TEST(test_timer_interrupt_vectors_to_0x50);
+    RUN_TEST(test_ie_cleared_after_interrupt);
+    RUN_TEST(test_timer_interrupt_clears_if_bit2_preserves_others);
+    RUN_TEST(test_timer_interrupt_clears_only_own_if_bit);
+    RUN_TEST(test_halt_exited_by_timer_interrupt);
+    RUN_TEST(test_halt_persists_without_interrupt);
+    RUN_TEST(test_vblank_has_higher_priority_than_timer);
+    RUN_TEST(test_lcdc_has_higher_priority_than_timer);
+    RUN_TEST(test_timer_overflow_sets_if_then_next_cycle_services_it);
+    RUN_TEST(test_timer_overflow_with_tma_reload_triggers_interrupt);
+    RUN_TEST(test_timer_interrupt_consumes_cycles);
+    RUN_TEST(test_timer_interrupt_pushes_correct_pc);
 
     /* Timer tests */
     RUN_TEST(test_div_starts_at_zero);
