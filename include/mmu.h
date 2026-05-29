@@ -32,6 +32,10 @@
 /* Interrupt flag register */
 #define IF_REG_ADDR   0xFF0F
 
+/* Serial communication registers */
+#define SB_REG_ADDR   0xFF01  /* Serial transfer data */
+#define SC_REG_ADDR   0xFF02  /* Serial control */
+
 #define ROM_BANK_SIZE 0x4000
 #define EXT_RAM_BANK_SIZE 0x2000
 

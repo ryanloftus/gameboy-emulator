@@ -357,6 +357,13 @@ void write_memory8(memory *mem, uint16_t addr, uint8_t value)
         return;
     }
 
+    /* Serial transfer: when SC ($FF02) is written with 0x81, the
+     * character in SB ($FF01) is ready to be transmitted */
+    if (addr == SC_REG_ADDR && value == 0x81) {
+        putchar(mem->raw[SB_REG_ADDR]);
+        fflush(stdout);
+    }
+
     addr = sanitize_addr(addr);
     mem->raw[addr] = value;
 }
