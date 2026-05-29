@@ -6,6 +6,44 @@
 #include <stdio.h>
 #include <string.h>
 
+/* Timer clock thresholds (T-cycles per TIMA increment) for TAC bits 1-0 */
+static const uint16_t tima_thresholds[] = {
+    1024,   /* 00: 4096 Hz */
+    16,     /* 01: 262144 Hz */
+    64,     /* 10: 65536 Hz */
+    256     /* 11: 16384 Hz */
+};
+
+void update_timers(virtual_cpu *cpu, uint16_t cycles_elapsed)
+{
+    memory *mem = cpu->mem;
+    uint8_t tac = mem->io_registers[TAC_REG_ADDR & 0xFF];
+
+    /* Update the internal 16-bit divider counter */
+    mem->div_counter += cycles_elapsed;
+
+    /* Update the TIMA counter */
+    if (tac & 0x04) {
+        uint8_t clock_select = tac & 0x03;
+        uint16_t threshold = tima_thresholds[clock_select];
+
+        mem->tima_accum += cycles_elapsed;
+        while (mem->tima_accum >= threshold) {
+            mem->tima_accum -= threshold;
+
+            /* Increment TIMA */
+            uint8_t tima = mem->io_registers[TIMA_REG_ADDR & 0xFF];
+            tima++;
+            if (tima == 0) {
+                /* Overflow: reload from TMA and request timer interrupt */
+                tima = mem->io_registers[TMA_REG_ADDR & 0xFF];
+                mem->io_registers[IF_REG_ADDR & 0xFF] |= 0x04; /* set timer interrupt flag (bit 2) */
+            }
+            mem->io_registers[TIMA_REG_ADDR & 0xFF] = tima;
+        }
+    }
+}
+
 void create_virtual_cpu(virtual_cpu *cpu, memory *mem)
 {
     memset(cpu, 0, sizeof(virtual_cpu));
@@ -66,6 +104,7 @@ void fetch_execute(virtual_cpu *cpu)
         execute_instruction(cpu, &dec);
         cpu->pc += dec.bytes;
         cpu->cycles += dec.cycles;
+        update_timers(cpu, dec.cycles);
         return;
     }
 
@@ -80,4 +119,5 @@ void fetch_execute(virtual_cpu *cpu)
     execute_instruction(cpu, &dec);
     cpu->pc += dec.bytes;
     cpu->cycles += dec.cycles;
+    update_timers(cpu, dec.cycles);
 }

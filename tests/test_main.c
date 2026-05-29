@@ -226,6 +226,25 @@ void test_halt_no_ime_pending_interrupt_pc_bug(void);
 void test_stop_sets_is_stopped(void);
 void test_stop_ignores_second_byte(void);
 
+/* test_timers.c */
+void test_div_starts_at_zero(void);
+void test_div_increments_every_256_cycles(void);
+void test_div_write_resets_divider(void);
+void test_update_timers_increments_div_counter(void);
+void test_tima_does_not_increment_when_disabled(void);
+void test_tima_increments_at_4096hz(void);
+void test_tima_increments_at_262144hz(void);
+void test_tima_increments_at_65536hz(void);
+void test_tima_increments_at_16384hz(void);
+void test_tima_overflow_reloads_from_tma_and_triggers_interrupt(void);
+void test_tima_overflow_preserves_other_if_bits(void);
+void test_tac_clock_select_works_with_enable(void);
+void test_multiple_tima_increments_in_one_call(void);
+void test_multiple_overflow_in_one_call(void);
+void test_div_rollover_independent_of_tima(void);
+void test_tima_persists_across_toggle(void);
+void test_div_counter_16bit_wraparound(void);
+
 /* test_mmu.c */
 void test_init_memory_zeroed(void);
 void test_write_read_memory8(void);
@@ -464,6 +483,25 @@ int main(void)
     RUN_TEST(test_decode_block2);
     RUN_TEST(test_decode_block3_alu_imm8);
     RUN_TEST(test_decode_block3_unknown);
+
+    /* Timer tests */
+    RUN_TEST(test_div_starts_at_zero);
+    RUN_TEST(test_div_increments_every_256_cycles);
+    RUN_TEST(test_div_write_resets_divider);
+    RUN_TEST(test_update_timers_increments_div_counter);
+    RUN_TEST(test_tima_does_not_increment_when_disabled);
+    RUN_TEST(test_tima_increments_at_4096hz);
+    RUN_TEST(test_tima_increments_at_262144hz);
+    RUN_TEST(test_tima_increments_at_65536hz);
+    RUN_TEST(test_tima_increments_at_16384hz);
+    RUN_TEST(test_tima_overflow_reloads_from_tma_and_triggers_interrupt);
+    RUN_TEST(test_tima_overflow_preserves_other_if_bits);
+    RUN_TEST(test_tac_clock_select_works_with_enable);
+    RUN_TEST(test_multiple_tima_increments_in_one_call);
+    RUN_TEST(test_multiple_overflow_in_one_call);
+    RUN_TEST(test_div_rollover_independent_of_tima);
+    RUN_TEST(test_tima_persists_across_toggle);
+    RUN_TEST(test_div_counter_16bit_wraparound);
 
     /* HALT/STOP tests */
     RUN_TEST(test_halt_sets_is_halted_ime_set);

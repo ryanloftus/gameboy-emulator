@@ -50,5 +50,6 @@ typedef struct virtual_cpu
 
 void create_virtual_cpu(virtual_cpu *cpu, memory *mem);
 void fetch_execute(virtual_cpu *cpu);
+void update_timers(virtual_cpu *cpu, uint16_t cycles_elapsed);
 
 #endif

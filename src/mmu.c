@@ -265,6 +265,11 @@ void init_memory(memory *mem, const char *rom_path)
 
 uint8_t read_memory8(memory *mem, uint16_t addr)
 {
+    /* DIV register returns upper 8 bits of internal divider counter */
+    if (addr == DIV_REG_ADDR) {
+        return (uint8_t)(mem->div_counter >> 8);
+    }
+
     if (is_cartridge_backed_addr(addr)) {
         cartridge *cart = &mem->cartridge;
 
@@ -321,6 +326,12 @@ uint16_t read_memory16(memory *mem, uint16_t addr)
 
 void write_memory8(memory *mem, uint16_t addr, uint8_t value)
 {
+    /* Writing any value to DIV resets the internal divider counter */
+    if (addr == DIV_REG_ADDR) {
+        mem->div_counter = 0;
+        return;
+    }
+
     if (is_cartridge_backed_addr(addr)) {
         cartridge *cart = &mem->cartridge;
 

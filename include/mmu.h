@@ -23,6 +23,15 @@
 #define IO_REGISTERS_START 0xFF00
 #define HIGH_RAM_START 0xFF80
 
+/* Timer registers */
+#define DIV_REG_ADDR  0xFF04
+#define TIMA_REG_ADDR 0xFF05
+#define TMA_REG_ADDR  0xFF06
+#define TAC_REG_ADDR  0xFF07
+
+/* Interrupt flag register */
+#define IF_REG_ADDR   0xFF0F
+
 #define ROM_BANK_SIZE 0x4000
 #define EXT_RAM_BANK_SIZE 0x2000
 
@@ -118,6 +127,10 @@ typedef struct memory
             uint8_t interrupt_enable_register;
         };
     };
+
+    /* Internal timer state (not memory-mapped) */
+    uint16_t div_counter;   /* Internal 16-bit divider counter, incremented every T-cycle */
+    uint16_t tima_accum;    /* Accumulator counting T-cycles for TIMA increments */
 } memory;
 
 void init_memory(memory *mem, const char *rom_path);
