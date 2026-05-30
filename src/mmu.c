@@ -260,6 +260,15 @@ void init_memory(memory *mem, const char *rom_path)
     if (rom_path != NULL) {
         load_cartridge(&mem->cartridge, rom_path);
     }
+
+    /* Recalculate MBC bank numbers based on initialized register values.
+     * After memset, bank_reg_1 = 0 which should map to ROM bank 1
+     * (bank 0 is reserved for the 0x0000-0x3FFF window). Without this,
+     * current_rom_bank stays at 0, incorrectly mapping the 0x4000-0x7FFF
+     * window to physical bank 0. */
+    if (mem->cartridge.mbc_type == 1) {
+        mbc1_recalculate_banks(&mem->cartridge);
+    }
 }
 
 /* ------------------------------------------------------------------ */

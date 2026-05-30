@@ -129,9 +129,13 @@ static void setup_mbc1_cartridge(memory *mem, size_t rom_size, size_t ram_size)
      *   bank_reg_1   = 0  (mapped to bank 1)
      *   bank_reg_2   = 0
      *   banking_mode = 0  (ROM mode)
-     *   current_rom_bank = 1
-     *   current_ram_bank = 0
+     *
+     * Properly initialize cached bank numbers since memset set them to 0.
+     * With bank_reg_1=0, current_rom_bank should be 1 (bank 0 is reserved
+     * for the 0x0000-0x3FFF window). With banking_mode=0, current_ram_bank=0.
      */
+    mem->cartridge.current_rom_bank = 1;
+    mem->cartridge.current_ram_bank = 0;
 
     if (ram_size > 0) {
         mem->cartridge.ram_size = ram_size;
@@ -369,6 +373,28 @@ void test_mbc1_ram_not_allocated_returns_ff(void)
     write_memory8(&mem, 0xA000, 0x55);
     val = read_memory8(&mem, 0xA000);
     TEST_ASSERT_EQUAL_UINT8(0xFF, val);
+}
+
+void test_mbc1_rom_bank_1_default_distinct_pattern(void)
+{
+    /* Test that ROM bank 1 (0x4000-0x7FFF) defaults to physical bank 1.
+     *
+     * Previously, setup_mbc1_cartridge left current_rom_bank at 0 (from memset),
+     * causing the 0x4000-0x7FFF window to incorrectly read from bank 0.
+     * The fix properly initializes current_rom_bank to 1 when bank_reg_1=0.
+     *
+     * Use a unique fill byte per bank so we can distinguish them.
+     */
+    setup_mbc1_cartridge(&mem, 2 * ROM_BANK_SIZE, 0);
+
+    /* Overwrite bank 0's first byte with a unique marker */
+    mem.cartridge.rom[0] = 0xAA;
+    /* Overwrite bank 1's first byte with a different unique marker */
+    mem.cartridge.rom[ROM_BANK_SIZE] = 0xBB;
+
+    /* Read from bank 1 window (0x4000-0x7FFF). Should return bank 1's marker. */
+    uint8_t val = read_memory8(&mem, 0x4000);
+    TEST_ASSERT_EQUAL_UINT8(0xBB, val);
 }
 
 void test_mbc1_ram_bank_wraps_modulo(void)

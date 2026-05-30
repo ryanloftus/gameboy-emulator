@@ -287,6 +287,7 @@ void test_mbc1_switch_from_rom_to_ram_mode(void);
 void test_mbc1_mode_switch_affects_bank_0_window(void);
 void test_mbc1_rom_addr_wraps_modulo_num_banks(void);
 void test_mbc1_ram_not_allocated_returns_ff(void);
+void test_mbc1_rom_bank_1_default_distinct_pattern(void);
 void test_mbc1_ram_bank_wraps_modulo(void);
 
 int main(void)
@@ -569,6 +570,7 @@ int main(void)
     RUN_TEST(test_mbc1_mode_switch_affects_bank_0_window);
     RUN_TEST(test_mbc1_rom_addr_wraps_modulo_num_banks);
     RUN_TEST(test_mbc1_ram_not_allocated_returns_ff);
+    RUN_TEST(test_mbc1_rom_bank_1_default_distinct_pattern);
     RUN_TEST(test_mbc1_ram_bank_wraps_modulo);
 
     return UNITY_END();
