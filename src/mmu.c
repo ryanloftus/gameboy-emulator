@@ -212,6 +212,9 @@ static void load_cartridge(cartridge *cartridge, const char *path)
     /* Parse MBC type from cartridge header */
     if (cartridge->rom_size > MBC_TYPE_ADDR) {
         cartridge->mbc_type = cartridge->rom[MBC_TYPE_ADDR];
+        if (g_debug_mode) {
+            printf("ROM has MBC type %d\n", cartridge->mbc_type);
+        }
         debug_assert(cartridge->mbc_type == 0 || cartridge->mbc_type == 1);
     }
 

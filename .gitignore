@@ -19,3 +19,4 @@ run_tests
 gbemu
 gameboy
 roms/
+debug/

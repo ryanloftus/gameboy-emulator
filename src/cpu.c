@@ -204,7 +204,9 @@ void fetch_execute(virtual_cpu *cpu)
     }
 
     if (g_debug_mode) {
-        printf("executing instr %d\n", dec.id);
+        printf("%04X: ", cpu->pc);
+        pretty_print_instr(&dec, cpu->mem, cpu->pc);
+        printf("\n");
     }
 
     execute_instruction(cpu, &dec);
