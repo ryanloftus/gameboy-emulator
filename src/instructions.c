@@ -111,7 +111,6 @@ static void alu_inc_r8(virtual_cpu *cpu, uint8_t *dest)
     uint8_t value = *dest;
     uint8_t result = value + 1;
     *dest = result;
-    // printf("inc r8 to %02X\n", result); // TODO: delete this
     flags_write_preserve_c(cpu, result == 0, 0, (value & 0x0F) == 0x0F);
 }
 
