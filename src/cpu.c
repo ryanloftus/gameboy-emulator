@@ -144,14 +144,6 @@ void fetch_execute(virtual_cpu *cpu)
     debug_assert(cpu != NULL);
     debug_assert(cpu->mem != NULL);
 
-    /* Apply delayed EI: if EI was scheduled, enable IME now at the start of
-       the next instruction (this is the "one instruction delay") */
-    if (cpu->ei_scheduled)
-    {
-        write_memory8(cpu->mem, 0xFFFF, 1);
-        cpu->ei_scheduled = 0;
-    }
-
     /* Service interrupts: if IME is set and there's a pending interrupt,
      * push PC, jump to vector, and wake from halt. This consumes the
      * instruction slot (no normal instruction is executed). */
@@ -161,6 +153,16 @@ void fetch_execute(virtual_cpu *cpu)
         /* No timers update here — timers are updated when the *next*
          * fetch_execute runs; the 5 M-cycles will be accounted then */
         return;
+    }
+
+    /* Apply delayed EI: if EI was scheduled, enable IME now.
+     * This is done AFTER interrupt checking (so no interrupt fires between
+     * EI and the next instruction) but BEFORE the next instruction executes
+     * (so DI can immediately clear it). */
+    if (cpu->ei_scheduled)
+    {
+        write_memory8(cpu->mem, 0xFFFF, 1);
+        cpu->ei_scheduled = 0;
     }
 
     /* If halted and no interrupt was serviced, skip instruction execution.

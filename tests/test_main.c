@@ -227,6 +227,7 @@ void test_stop_sets_is_stopped(void);
 void test_stop_ignores_second_byte(void);
 
 /* test_interrupts.c */
+void test_ei_di_does_not_allow_interrupt_between(void);
 void test_timer_interrupt_fires_on_overflow(void);
 void test_timer_interrupt_does_not_fire_when_ie_bit2_clear(void);
 void test_timer_interrupt_does_not_fire_when_ie_is_zero(void);
@@ -503,6 +504,7 @@ int main(void)
     RUN_TEST(test_decode_block3_unknown);
 
     /* Interrupt tests */
+    RUN_TEST(test_ei_di_does_not_allow_interrupt_between);
     RUN_TEST(test_timer_interrupt_fires_on_overflow);
     RUN_TEST(test_timer_interrupt_does_not_fire_when_ie_bit2_clear);
     RUN_TEST(test_timer_interrupt_does_not_fire_when_ie_is_zero);

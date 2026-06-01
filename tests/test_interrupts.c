@@ -376,3 +376,42 @@ void test_timer_interrupt_clears_only_own_if_bit(void)
     /* IF bit 2 cleared, no other bits to preserve */
     TEST_ASSERT_EQUAL_UINT8(0x00, mem.io_registers[IO_IDX(IF_REG_ADDR)]);
 }
+
+/* ===== Test: EI delayed effect — interrupt does NOT fire between EI and DI ===== */
+
+void test_ei_di_does_not_allow_interrupt_between(void)
+{
+    virtual_cpu cpu;
+    memory mem;
+    /* EI (0xFB) followed by DI (0xF3) */
+    uint8_t code[] = {0xFB, 0xF3};
+
+    cpu_test_reset(&cpu, &mem, code);
+    /* Clear IME/IE — no interrupts initially */
+    write_memory8(&mem, 0xFFFF, 0);
+    mem.interrupt_enable_register = 0;
+    /* Request a VBlank interrupt (bit 0) — EI writes 1 to 0xFFFF which
+     * enables VBlank, so this can fire after EI takes effect */
+    mem.io_registers[IO_IDX(IF_REG_ADDR)] |= 0x01;
+
+    /* Execute EI — IME should NOT be set yet */
+    fetch_execute(&cpu);
+    TEST_ASSERT_EQUAL_UINT8(1, cpu.ei_scheduled);
+    TEST_ASSERT_EQUAL_UINT8(0, read_memory8(&mem, 0xFFFF)); /* IME still 0 */
+    TEST_ASSERT_EQUAL_UINT16(1, cpu.pc);
+
+    /* Execute DI — this should run before the scheduled IME takes effect.
+     * With the BUG: fetch_execute checked ei_scheduled BEFORE service_interrupts,
+     * so IME=1 was set, then the VBlank interrupt fired.
+     * With the FIX: service_interrupts runs first (IME=0, skip), then
+     * ei_scheduled is applied, then DI clears it. */
+    fetch_execute(&cpu);
+    /* IME should still be 0 (DI cleared it, and the pending EI was cancelled) */
+    TEST_ASSERT_EQUAL_UINT8(0, read_memory8(&mem, 0xFFFF));
+    TEST_ASSERT_EQUAL_UINT8(0, cpu.ei_scheduled);
+    /* PC should be 2 (DI executed normally, no interrupt) */
+    TEST_ASSERT_EQUAL_UINT16(2, cpu.pc);
+
+    /* The VBlank interrupt should still be pending (was never serviced) */
+    TEST_ASSERT_TRUE(mem.io_registers[IO_IDX(IF_REG_ADDR)] & 0x01);
+}
