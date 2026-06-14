@@ -37,6 +37,10 @@ static uint8_t service_interrupts(virtual_cpu *cpu)
 {
     memory *mem = cpu->mem;
 
+    if (!cpu->ime) {
+        return 0;
+    }
+
     uint8_t ie = mem->interrupt_enable_register;
     if (ie == 0) {
         return 0;
@@ -68,7 +72,7 @@ static uint8_t service_interrupts(virtual_cpu *cpu)
     mem->io_registers[IF_REG_ADDR & 0xFF] = iflag;
 
     /* Disable IME */
-    mem->interrupt_enable_register = 0;
+    cpu->ime = 0;
     cpu->ei_scheduled = 0;
 
     /* Push PC onto stack */
@@ -161,7 +165,7 @@ void fetch_execute(virtual_cpu *cpu)
      * (so DI can immediately clear it). */
     if (cpu->ei_scheduled)
     {
-        write_memory8(cpu->mem, 0xFFFF, 1);
+        cpu->ime = 1;
         cpu->ei_scheduled = 0;
     }
 

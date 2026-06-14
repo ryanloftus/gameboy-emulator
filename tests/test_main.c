@@ -33,6 +33,7 @@ void test_ld_r16mem_hld(void);
 void test_jr_imm8_positive(void);
 void test_jr_imm8_negative(void);
 void test_jr_imm8_zero_offset(void);
+void test_jr_imm8_offset_from_next_instruction(void);
 void test_jr_nz_taken(void);
 void test_jr_nz_not_taken(void);
 void test_jr_z_taken(void);
@@ -323,6 +324,7 @@ int main(void)
     RUN_TEST(test_jr_imm8_positive);
     RUN_TEST(test_jr_imm8_negative);
     RUN_TEST(test_jr_imm8_zero_offset);
+    RUN_TEST(test_jr_imm8_offset_from_next_instruction);
     RUN_TEST(test_jr_nz_taken);
     RUN_TEST(test_jr_nz_not_taken);
     RUN_TEST(test_jr_z_taken);

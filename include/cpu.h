@@ -37,8 +37,9 @@ typedef struct virtual_cpu
 
     /* EI one-instruction delay scheduling flag */
     uint8_t ei_scheduled; /* non-zero when EI has been executed but not yet taken effect */
-    /* Note: The Interrupt Master Enable (IME) flag is stored at memory
-       address 0xFFFF (the interrupt_enable_register in the memory struct). */
+    /* Interrupt Master Enable (IME) is separate from the IE register at
+       memory address 0xFFFF. */
+    uint8_t ime;
 
     /* CPU state flags */
     uint8_t is_halted;

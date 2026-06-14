@@ -74,7 +74,7 @@ int main(int argc, char *argv[])
         render(&mem, frame_buffer, WIDTH, HEIGHT);
 
         /* Signal VBlank interrupt (IF bit 0) — occurs ~59.7 times a second */
-        mem.io_registers[(IF_REG_ADDR) & 0xFF] |= 0x01;
+        // mem.io_registers[(IF_REG_ADDR) & 0xFF] |= 0x01; // TODO: am i using vblank correctly?
 
         SDL_UpdateTexture(texture, NULL, frame_buffer, WIDTH * sizeof(uint32_t));
         SDL_RenderClear(renderer);

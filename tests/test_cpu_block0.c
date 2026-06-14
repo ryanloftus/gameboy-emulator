@@ -355,6 +355,20 @@ void test_jr_imm8_zero_offset(void)
     assert_flags_unchanged(&cpu, 0xF0);
 }
 
+void test_jr_imm8_offset_from_next_instruction(void)
+{
+    virtual_cpu cpu;
+    uint8_t code[] = {0x18, 0x01, 0x00};
+
+    cpu_test_reset(&cpu, NULL, code);
+    cpu.f = 0xF0;
+    cpu_test_run(&cpu);
+
+    /* JR +1 should land at PC = 0 + 2 + 1 = 3, not at 1. */
+    TEST_ASSERT_EQUAL_UINT16(3, cpu.pc);
+    assert_flags_unchanged(&cpu, 0xF0);
+}
+
 void test_jr_nz_taken(void)
 {
     virtual_cpu cpu;

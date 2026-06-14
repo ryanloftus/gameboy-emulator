@@ -48,7 +48,8 @@ void test_timer_interrupt_fires_on_overflow(void)
     cpu_test_reset(&cpu, &mem, nop_code);
 
     /* Enable IME and enable timer in IE */
-    write_memory8(&mem, 0xFFFF, 0xFF);  /* IE = all interrupts enabled */
+    mem.interrupt_enable_register = 0xFF;  /* IE = all interrupts enabled */
+    cpu.ime = 1; /* IME enabled */
 
     /* Set up timer to overflow on the NOP instruction */
     setup_timer_overflow_on_nop(&cpu);
@@ -74,7 +75,7 @@ void test_timer_interrupt_fires_on_overflow(void)
     TEST_ASSERT_EQUAL_UINT16(0x0050, cpu.pc);
 
     /* IME should be cleared */
-    TEST_ASSERT_EQUAL_UINT8(0, read_memory8(&mem, 0xFFFF));
+    TEST_ASSERT_EQUAL_UINT8(0, cpu.ime);
 
     /* IF bit 2 should be cleared */
     uint8_t iflag = mem.io_registers[IO_IDX(IF_REG_ADDR)];
@@ -135,6 +136,7 @@ void test_timer_interrupt_vectors_to_0x50(void)
 
     cpu.sp = 0xFFF0;
     mem.interrupt_enable_register = 0x04;  /* IE: timer enabled */
+    cpu.ime = 1; /* IME enabled */
     request_timer_interrupt(&mem);
 
     fetch_execute(&cpu);
@@ -156,12 +158,13 @@ void test_ie_cleared_after_interrupt(void)
     cpu_test_reset(&cpu, &mem, nop_code);
 
     mem.interrupt_enable_register = 0x04;  /* IE: timer enabled */
+    cpu.ime = 1; /* IME enabled */
     request_timer_interrupt(&mem);
 
     fetch_execute(&cpu);
 
-    /* IE register at 0xFFFF should be 0 (cleared by interrupt) */
-    TEST_ASSERT_EQUAL_UINT8(0, read_memory8(&mem, 0xFFFF));
+    /* IME should be cleared after servicing an interrupt */
+    TEST_ASSERT_EQUAL_UINT8(0, cpu.ime);
 }
 
 /* ===== Test: IF bit 2 is cleared, other IF bits preserved ===== */
@@ -174,6 +177,7 @@ void test_timer_interrupt_clears_if_bit2_preserves_others(void)
 
     /* IE: only timer (bit 2) enabled */
     mem.interrupt_enable_register = 0x04;
+    cpu.ime = 1; /* IME enabled */
     /* IF: VBlank (bit 0), LCDC (bit 1), and Timer (bit 2) */
     mem.io_registers[IO_IDX(IF_REG_ADDR)] = 0x07;
 
@@ -194,6 +198,7 @@ void test_halt_exited_by_timer_interrupt(void)
 
     cpu.is_halted = 1;
     mem.interrupt_enable_register = 0x04;  /* IE: timer enabled */
+    cpu.ime = 1; /* IME enabled */
     request_timer_interrupt(&mem);
 
     fetch_execute(&cpu);
@@ -235,6 +240,7 @@ void test_vblank_has_higher_priority_than_timer(void)
     cpu_test_reset(&cpu, &mem, nop_code);
 
     mem.interrupt_enable_register = 0xFF;  /* All interrupts enabled */
+    cpu.ime = 1; /* IME enabled */
     /* Both VBlank (bit 0) and Timer (bit 2) pending */
     mem.io_registers[IO_IDX(IF_REG_ADDR)] = 0x05;  /* bits 0 and 2 */
 
@@ -256,6 +262,7 @@ void test_lcdc_has_higher_priority_than_timer(void)
     cpu_test_reset(&cpu, &mem, nop_code);
 
     mem.interrupt_enable_register = 0xFF;  /* All interrupts enabled */
+    cpu.ime = 1; /* IME enabled */
     /* Both LCDC (bit 1) and Timer (bit 2) pending */
     mem.io_registers[IO_IDX(IF_REG_ADDR)] = 0x06;  /* bits 1 and 2 */
 
@@ -279,6 +286,7 @@ void test_timer_overflow_sets_if_then_next_cycle_services_it(void)
     cpu_test_reset(&cpu, &mem, nop_code);
 
     mem.interrupt_enable_register = 0xFF;  /* All interrupts enabled */
+    cpu.ime = 1; /* IME enabled */
     setup_timer_overflow_on_nop(&cpu);
 
     /* First cycle: NOP executes, TIMA overflows */
@@ -301,6 +309,7 @@ void test_timer_overflow_with_tma_reload_triggers_interrupt(void)
     cpu_test_reset(&cpu, &mem, nop_code);
 
     mem.interrupt_enable_register = 0xFF;  /* All interrupts enabled */
+    cpu.ime = 1; /* IME enabled */
     mem.io_registers[IO_IDX(TAC_REG_ADDR)] = 0x05;   /* enable=1, threshold=16 */
     mem.io_registers[IO_IDX(TIMA_REG_ADDR)] = 0xFF;
     mem.io_registers[IO_IDX(TMA_REG_ADDR)] = 0xAB;   /* TMA reload value */
@@ -327,6 +336,7 @@ void test_timer_interrupt_consumes_cycles(void)
     cpu_test_reset(&cpu, &mem, nop_code);
 
     mem.interrupt_enable_register = 0x04;  /* IE: timer enabled */
+    cpu.ime = 1; /* IME enabled */
     request_timer_interrupt(&mem);
     cpu.cycles = 0;
 
@@ -348,6 +358,7 @@ void test_timer_interrupt_pushes_correct_pc(void)
     cpu.pc = 0x1234;
     cpu.sp = 0xFFF0;
     mem.interrupt_enable_register = 0x04;  /* IE: timer enabled */
+    cpu.ime = 1; /* IME enabled */
     request_timer_interrupt(&mem);
 
     fetch_execute(&cpu);
@@ -366,6 +377,7 @@ void test_timer_interrupt_clears_only_own_if_bit(void)
 
     /* IE: timer + vblank enabled */
     mem.interrupt_enable_register = 0x05;
+    cpu.ime = 1; /* IME enabled */
     /* IF: only timer bit set */
     mem.io_registers[IO_IDX(IF_REG_ADDR)] = 0x04;
 
@@ -388,16 +400,15 @@ void test_ei_di_does_not_allow_interrupt_between(void)
 
     cpu_test_reset(&cpu, &mem, code);
     /* Clear IME/IE — no interrupts initially */
-    write_memory8(&mem, 0xFFFF, 0);
     mem.interrupt_enable_register = 0;
-    /* Request a VBlank interrupt (bit 0) — EI writes 1 to 0xFFFF which
-     * enables VBlank, so this can fire after EI takes effect */
+    cpu.ime = 0;
+    /* Request a VBlank interrupt (bit 0) */
     mem.io_registers[IO_IDX(IF_REG_ADDR)] |= 0x01;
 
     /* Execute EI — IME should NOT be set yet */
     fetch_execute(&cpu);
     TEST_ASSERT_EQUAL_UINT8(1, cpu.ei_scheduled);
-    TEST_ASSERT_EQUAL_UINT8(0, read_memory8(&mem, 0xFFFF)); /* IME still 0 */
+    TEST_ASSERT_EQUAL_UINT8(0, cpu.ime); /* IME still 0 */
     TEST_ASSERT_EQUAL_UINT16(1, cpu.pc);
 
     /* Execute DI — this should run before the scheduled IME takes effect.
@@ -407,7 +418,7 @@ void test_ei_di_does_not_allow_interrupt_between(void)
      * ei_scheduled is applied, then DI clears it. */
     fetch_execute(&cpu);
     /* IME should still be 0 (DI cleared it, and the pending EI was cancelled) */
-    TEST_ASSERT_EQUAL_UINT8(0, read_memory8(&mem, 0xFFFF));
+    TEST_ASSERT_EQUAL_UINT8(0, cpu.ime);
     TEST_ASSERT_EQUAL_UINT8(0, cpu.ei_scheduled);
     /* PC should be 2 (DI executed normally, no interrupt) */
     TEST_ASSERT_EQUAL_UINT16(2, cpu.pc);
