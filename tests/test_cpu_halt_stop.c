@@ -60,6 +60,29 @@ void test_halt_no_ime_pending_interrupt_pc_bug(void)
     TEST_ASSERT_EQUAL_UINT16(1, cpu.pc);
 }
 
+void test_halt_wakes_without_servicing_when_ime_clear(void)
+{
+    virtual_cpu cpu;
+    memory mem;
+    uint8_t code[] = {0x76, 0x00}; /* HALT then NOP */
+
+    cpu_test_reset(&cpu, &mem, code);
+    cpu.ime = 0;
+    mem.interrupt_enable_register = 0x04; /* IE: timer enabled */
+    mem.io_registers[IF_REG_ADDR & 0xFF] = 0x00;
+
+    cpu_test_run(&cpu);
+    TEST_ASSERT_EQUAL_UINT8(1, cpu.is_halted);
+    TEST_ASSERT_EQUAL_UINT16(1, cpu.pc);
+
+    mem.io_registers[IF_REG_ADDR & 0xFF] |= 0x04; /* timer interrupt pending */
+    cpu_test_run(&cpu);
+
+    TEST_ASSERT_EQUAL_UINT8(0, cpu.is_halted);
+    TEST_ASSERT_EQUAL_UINT16(2, cpu.pc); /* NOP executed, not vector jump */
+    TEST_ASSERT_BITS(0x04, 0x04, mem.io_registers[IF_REG_ADDR & 0xFF]);
+}
+
 /* ===== STOP Tests ===== */
 
 void test_stop_sets_is_stopped(void)

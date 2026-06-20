@@ -26,6 +26,21 @@ static const uint8_t int_bits[] = { 0, 1, 2, 3, 4 };
 static const uint16_t int_vectors[] = { INT_VBLANK, INT_LCDC, INT_TIMER, INT_SERIAL, INT_JOYPAD };
 
 /**
+ * Return the bitmask of enabled, pending interrupts (IE & IF), or 0 if none.
+ */
+static uint8_t get_pending_interrupts(virtual_cpu *cpu)
+{
+    memory *mem = cpu->mem;
+    uint8_t ie = mem->interrupt_enable_register;
+    if (ie == 0) {
+        return 0;
+    }
+
+    uint8_t iflag = mem->io_registers[IF_REG_ADDR & 0xFF];
+    return ie & iflag;
+}
+
+/**
  * Service the highest-priority pending interrupt if IME is set.
  * Clears the corresponding IF bit, clears IME (0xFFFF), and pushes
  * the current PC to the stack before jumping to the vector address.
@@ -41,17 +56,12 @@ static uint8_t service_interrupts(virtual_cpu *cpu)
         return 0;
     }
 
-    uint8_t ie = mem->interrupt_enable_register;
-    if (ie == 0) {
+    uint8_t pending = get_pending_interrupts(cpu);
+    if (pending == 0) {
         return 0;
     }
 
     uint8_t iflag = mem->io_registers[IF_REG_ADDR & 0xFF];
-    uint8_t pending = ie & iflag;
-
-    if (pending == 0) {
-        return 0;
-    }
 
     /* Wake from halt */
     cpu->is_halted = 0;
@@ -91,15 +101,19 @@ void update_timers(virtual_cpu *cpu, uint16_t cycles_elapsed)
     memory *mem = cpu->mem;
     uint8_t tac = mem->io_registers[TAC_REG_ADDR & 0xFF];
 
+    /* Instructions report machine cycles (M-cycles); convert to T-cycles for
+     * the hardware timer and divider logic. */
+    uint16_t t_cycles = (uint16_t)((uint32_t)cycles_elapsed * 4u);
+
     /* Update the internal 16-bit divider counter */
-    mem->div_counter += cycles_elapsed;
+    mem->div_counter += t_cycles;
 
     /* Update the TIMA counter */
     if (tac & 0x04) {
         uint8_t clock_select = tac & 0x03;
         uint16_t threshold = tima_thresholds[clock_select];
 
-        mem->tima_accum += cycles_elapsed;
+        mem->tima_accum += t_cycles;
         while (mem->tima_accum >= threshold) {
             mem->tima_accum -= threshold;
 
@@ -169,14 +183,23 @@ void fetch_execute(virtual_cpu *cpu)
         cpu->ei_scheduled = 0;
     }
 
-    /* If halted and no interrupt was serviced, skip instruction execution.
-     * The CPU just "nops" through cycles until an interrupt un-halts it. */
+    /* If halted and no interrupt was serviced, burn cycles until the CPU
+     * resumes. With IME set, service_interrupts above handles wake + dispatch.
+     * With IME clear, wake as soon as IE & IF is non-zero but do not call the
+     * interrupt handler. */
     if (cpu->is_halted) {
-        /* Each fetch_execute call while halted consumes 1 M-cycle worth
-         * of time so timers still advance */
-        cpu->cycles += 1;
-        update_timers(cpu, 1);
-        return;
+        if (!cpu->ime && get_pending_interrupts(cpu)) {
+            cpu->is_halted = 0;
+        } else {
+            cpu->cycles += 1;
+            update_timers(cpu, 1);
+            if (!cpu->ime && get_pending_interrupts(cpu)) {
+                cpu->is_halted = 0;
+            }
+            if (cpu->is_halted) {
+                return;
+            }
+        }
     }
 
     uint8_t opcode = read_memory8(cpu->mem, cpu->pc);

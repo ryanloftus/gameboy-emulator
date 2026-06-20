@@ -24,10 +24,10 @@ static const uint8_t nop_code[] = { 0x00 };
 static void setup_timer_overflow_on_nop(virtual_cpu *cpu)
 {
     memory *mem = cpu->mem;
-    mem->io_registers[IO_IDX(TAC_REG_ADDR)] = 0x05;   /* enable=1, clock=01 => threshold=16 */
+    mem->io_registers[IO_IDX(TAC_REG_ADDR)] = 0x05;   /* enable=1, clock=01 => threshold=16 T-cycles */
     mem->io_registers[IO_IDX(TIMA_REG_ADDR)] = 0xFF;  /* right before overflow */
     mem->io_registers[IO_IDX(TMA_REG_ADDR)] = 0x00;   /* reload value */
-    mem->tima_accum = 15;  /* 15 + 1 (NOP cycles) = 16 = threshold */
+    mem->tima_accum = 12;  /* 12 + 4 (NOP T-cycles) = 16 = threshold */
     mem->div_counter = 0;
 }
 
@@ -310,10 +310,10 @@ void test_timer_overflow_with_tma_reload_triggers_interrupt(void)
 
     mem.interrupt_enable_register = 0xFF;  /* All interrupts enabled */
     cpu.ime = 1; /* IME enabled */
-    mem.io_registers[IO_IDX(TAC_REG_ADDR)] = 0x05;   /* enable=1, threshold=16 */
+    mem.io_registers[IO_IDX(TAC_REG_ADDR)] = 0x05;   /* enable=1, threshold=16 T-cycles */
     mem.io_registers[IO_IDX(TIMA_REG_ADDR)] = 0xFF;
     mem.io_registers[IO_IDX(TMA_REG_ADDR)] = 0xAB;   /* TMA reload value */
-    mem.tima_accum = 15;  /* 15 + 1 NOP cycle = 16 = threshold */
+    mem.tima_accum = 12;  /* 12 + 4 (NOP T-cycles) = 16 = threshold */
     mem.div_counter = 0;
 
     /* First cycle: overflow, TIMA reloads to 0xAB, IF set */

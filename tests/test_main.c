@@ -224,6 +224,7 @@ void test_decode_block3_unknown(void);
 void test_halt_sets_is_halted_ime_set(void);
 void test_halt_sets_is_halted_ime_not_set_no_pending(void);
 void test_halt_no_ime_pending_interrupt_pc_bug(void);
+void test_halt_wakes_without_servicing_when_ime_clear(void);
 void test_stop_sets_is_stopped(void);
 void test_stop_ignores_second_byte(void);
 
@@ -546,6 +547,7 @@ int main(void)
     RUN_TEST(test_halt_sets_is_halted_ime_set);
     RUN_TEST(test_halt_sets_is_halted_ime_not_set_no_pending);
     RUN_TEST(test_halt_no_ime_pending_interrupt_pc_bug);
+    RUN_TEST(test_halt_wakes_without_servicing_when_ime_clear);
     RUN_TEST(test_stop_sets_is_stopped);
     RUN_TEST(test_stop_ignores_second_byte);
 

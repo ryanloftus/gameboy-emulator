@@ -74,10 +74,29 @@ void test_update_timers_increments_div_counter(void)
     TEST_ASSERT_EQUAL_UINT16(0, mem.div_counter);
 
     update_timers(&cpu, 4);
-    TEST_ASSERT_EQUAL_UINT16(4, mem.div_counter);
+    TEST_ASSERT_EQUAL_UINT16(16, mem.div_counter);
 
     update_timers(&cpu, 100);
-    TEST_ASSERT_EQUAL_UINT16(104, mem.div_counter);
+    TEST_ASSERT_EQUAL_UINT16(416, mem.div_counter);
+}
+
+void test_update_timers_converts_machine_cycles_to_t_cycles(void)
+{
+    memory mem;
+    virtual_cpu cpu;
+    init_memory(&mem, NULL);
+    create_virtual_cpu(&cpu, &mem);
+
+    mem.io_registers[IO_IDX(TAC_REG_ADDR)] = 0x05;   /* enable=1, clock=01 => threshold=16 T-cycles */
+    mem.io_registers[IO_IDX(TIMA_REG_ADDR)] = 0x00;
+    mem.tima_accum = 0;
+
+    update_timers(&cpu, 1);
+    TEST_ASSERT_EQUAL_UINT16(4, mem.div_counter);
+    TEST_ASSERT_EQUAL_UINT8(0, mem.io_registers[IO_IDX(TIMA_REG_ADDR)]);
+
+    update_timers(&cpu, 3);
+    TEST_ASSERT_EQUAL_UINT8(1, mem.io_registers[IO_IDX(TIMA_REG_ADDR)]);
 }
 
 /* Test that TAC bit 2 = 0 means timer disabled (TIMA doesn't increment) */
@@ -105,21 +124,21 @@ void test_tima_increments_at_4096hz(void)
     init_memory(&mem, NULL);
     create_virtual_cpu(&cpu, &mem);
 
-    /* TAC: enable=1, clock=00 => 4096 Hz, threshold = 1024 */
+    /* TAC: enable=1, clock=00 => 4096 Hz, threshold = 1024 T-cycles */
     mem.io_registers[IO_IDX(TAC_REG_ADDR)] = 0x04;   /* bit 2 set, bits 1-0 = 00 */
     mem.io_registers[IO_IDX(TIMA_REG_ADDR)] = 0x00;
     mem.tima_accum = 0;
 
-    /* 1023 cycles: no increment */
-    update_timers(&cpu, 1023);
+    /* 255 machine cycles = 1020 T-cycles: no increment */
+    update_timers(&cpu, 255);
     TEST_ASSERT_EQUAL_UINT8(0, mem.io_registers[IO_IDX(TIMA_REG_ADDR)]);
 
-    /* 1 more cycle (total 1024): increments to 1 */
+    /* 1 more machine cycle = 4 T-cycles (total 1024 T-cycles): increments to 1 */
     update_timers(&cpu, 1);
     TEST_ASSERT_EQUAL_UINT8(1, mem.io_registers[IO_IDX(TIMA_REG_ADDR)]);
 
-    /* Another 1024: increments to 2 */
-    update_timers(&cpu, 1024);
+    /* Another 256 machine cycles = 1024 T-cycles: increments to 2 */
+    update_timers(&cpu, 256);
     TEST_ASSERT_EQUAL_UINT8(2, mem.io_registers[IO_IDX(TIMA_REG_ADDR)]);
 }
 
@@ -131,21 +150,21 @@ void test_tima_increments_at_262144hz(void)
     init_memory(&mem, NULL);
     create_virtual_cpu(&cpu, &mem);
 
-    /* TAC: enable=1, clock=01 => 262144 Hz, threshold = 16 */
-    mem.io_registers[IO_IDX(TAC_REG_ADDR)] = 0x05;   /* bit 2 set, bits 1-0 = 01 */
+    /* TAC: enable=1, clock=01 => 262144 Hz, threshold = 16 T-cycles */
+    mem.io_registers[IO_IDX(TAC_REG_ADDR)] = 0x05;
     mem.io_registers[IO_IDX(TIMA_REG_ADDR)] = 0x00;
     mem.tima_accum = 0;
 
-    /* 15 cycles: no increment */
-    update_timers(&cpu, 15);
+    /* 3 machine cycles: no increment (3 * 4 = 12 T-cycles) */
+    update_timers(&cpu, 3);
     TEST_ASSERT_EQUAL_UINT8(0, mem.io_registers[IO_IDX(TIMA_REG_ADDR)]);
 
-    /* 1 more: increments */
+    /* 1 more machine cycle: increments */
     update_timers(&cpu, 1);
     TEST_ASSERT_EQUAL_UINT8(1, mem.io_registers[IO_IDX(TIMA_REG_ADDR)]);
 }
 
-/* Test TIMA at 65536 Hz (threshold 64) */
+/* Test TIMA at 65536 Hz (threshold 64 T-cycles) */
 void test_tima_increments_at_65536hz(void)
 {
     memory mem;
@@ -153,19 +172,19 @@ void test_tima_increments_at_65536hz(void)
     init_memory(&mem, NULL);
     create_virtual_cpu(&cpu, &mem);
 
-    /* TAC: enable=1, clock=10 => 65536 Hz, threshold = 64 */
+    /* TAC: enable=1, clock=10 => 65536 Hz, threshold = 64 T-cycles */
     mem.io_registers[IO_IDX(TAC_REG_ADDR)] = 0x06;
     mem.io_registers[IO_IDX(TIMA_REG_ADDR)] = 0x00;
     mem.tima_accum = 0;
 
-    update_timers(&cpu, 63);
+    update_timers(&cpu, 15);
     TEST_ASSERT_EQUAL_UINT8(0, mem.io_registers[IO_IDX(TIMA_REG_ADDR)]);
 
     update_timers(&cpu, 1);
     TEST_ASSERT_EQUAL_UINT8(1, mem.io_registers[IO_IDX(TIMA_REG_ADDR)]);
 }
 
-/* Test TIMA at 16384 Hz (threshold 256) */
+/* Test TIMA at 16384 Hz (threshold 256 T-cycles) */
 void test_tima_increments_at_16384hz(void)
 {
     memory mem;
@@ -173,12 +192,12 @@ void test_tima_increments_at_16384hz(void)
     init_memory(&mem, NULL);
     create_virtual_cpu(&cpu, &mem);
 
-    /* TAC: enable=1, clock=11 => 16384 Hz, threshold = 256 */
+    /* TAC: enable=1, clock=11 => 16384 Hz, threshold = 256 T-cycles */
     mem.io_registers[IO_IDX(TAC_REG_ADDR)] = 0x07;
     mem.io_registers[IO_IDX(TIMA_REG_ADDR)] = 0x00;
     mem.tima_accum = 0;
 
-    update_timers(&cpu, 255);
+    update_timers(&cpu, 63);
     TEST_ASSERT_EQUAL_UINT8(0, mem.io_registers[IO_IDX(TIMA_REG_ADDR)]);
 
     update_timers(&cpu, 1);
@@ -203,8 +222,8 @@ void test_tima_overflow_reloads_from_tma_and_triggers_interrupt(void)
     mem.io_registers[IO_IDX(IF_REG_ADDR)] = 0;
     mem.tima_accum = 0;
 
-    /* 1024 cycles: TIMA rolls over from 0xFF to 0, reloads from TMA */
-    update_timers(&cpu, 1024);
+    /* 256 machine cycles = 1024 T-cycles: TIMA rolls over from 0xFF to 0, reloads from TMA */
+    update_timers(&cpu, 256);
 
     /* TIMA should contain the reload value */
     TEST_ASSERT_EQUAL_UINT8(0xAB, mem.io_registers[IO_IDX(TIMA_REG_ADDR)]);
@@ -228,7 +247,7 @@ void test_tima_overflow_preserves_other_if_bits(void)
     mem.io_registers[IO_IDX(IF_REG_ADDR)] = 0x03;
     mem.tima_accum = 0;
 
-    update_timers(&cpu, 1024);
+    update_timers(&cpu, 256);
 
     /* Timer bit (2) set, existing bits 0 and 1 preserved */
     TEST_ASSERT_EQUAL_UINT8(0x07, mem.io_registers[IO_IDX(IF_REG_ADDR)]);
@@ -244,7 +263,7 @@ void test_tac_clock_select_works_with_enable(void)
 
     /* Test each clock setting individually */
     uint8_t clocks[] = {0x04, 0x05, 0x06, 0x07};
-    uint16_t thresholds[] = {1024, 16, 64, 256};
+    uint16_t thresholds[] = {256, 4, 16, 64};
 
     for (int i = 0; i < 4; i++) {
         mem.io_registers[IO_IDX(TAC_REG_ADDR)] = clocks[i];
@@ -277,8 +296,8 @@ void test_multiple_tima_increments_in_one_call(void)
     mem.io_registers[IO_IDX(TIMA_REG_ADDR)] = 0x00;
     mem.tima_accum = 0;
 
-    /* 48 cycles = 3 increments */
-    update_timers(&cpu, 48);
+    /* 12 cycles = 3 increments */
+    update_timers(&cpu, 12);
     TEST_ASSERT_EQUAL_UINT8(3, mem.io_registers[IO_IDX(TIMA_REG_ADDR)]);
 }
 
@@ -297,8 +316,8 @@ void test_multiple_overflow_in_one_call(void)
     mem.io_registers[IO_IDX(IF_REG_ADDR)] = 0;
     mem.tima_accum = 0;
 
-    /* 48 cycles = 3 increments: FE -> FF -> overflow! (reload to 0x42, set IF) -> 0x43 */
-    update_timers(&cpu, 48);
+    /* 12 cycles = 3 increments: FE -> FF -> overflow! (reload to 0x42, set IF) -> 0x43 */
+    update_timers(&cpu, 12);
 
     /* After overflow: TIMA = TMA + 1 = 0x42 + 1 = 0x43 */
     TEST_ASSERT_EQUAL_UINT8(0x43, mem.io_registers[IO_IDX(TIMA_REG_ADDR)]);
@@ -337,11 +356,11 @@ void test_tima_persists_across_toggle(void)
     create_virtual_cpu(&cpu, &mem);
 
     /* Enable timer, increment once */
-    mem.io_registers[IO_IDX(TAC_REG_ADDR)] = 0x05;   /* enable=1, threshold=16 */
+    mem.io_registers[IO_IDX(TAC_REG_ADDR)] = 0x05;   /* enable=1, threshold=16 T-cycles */
     mem.io_registers[IO_IDX(TIMA_REG_ADDR)] = 0x00;
     mem.tima_accum = 0;
 
-    update_timers(&cpu, 16);
+    update_timers(&cpu, 4);
     TEST_ASSERT_EQUAL_UINT8(1, mem.io_registers[IO_IDX(TIMA_REG_ADDR)]);
 
     /* Disable timer, run many cycles */
@@ -351,7 +370,7 @@ void test_tima_persists_across_toggle(void)
 
     /* Re-enable, should continue from where it left off */
     mem.io_registers[IO_IDX(TAC_REG_ADDR)] = 0x05;
-    update_timers(&cpu, 16);
+    update_timers(&cpu, 4);
     TEST_ASSERT_EQUAL_UINT8(2, mem.io_registers[IO_IDX(TIMA_REG_ADDR)]);
 }
 
@@ -368,7 +387,8 @@ void test_div_counter_16bit_wraparound(void)
     /* Read DIV before wrap: should be 0xFF */
     TEST_ASSERT_EQUAL_UINT8(0xFF, read_memory8(&mem, DIV_REG_ADDR));
 
-    update_timers(&cpu, 256);
+    /* 64 machine cycles = 256 T-cycles, enough to wrap the lower byte of div_counter */
+    update_timers(&cpu, 64);
 
     /* Read DIV after wrap: should be 0x00 */
     TEST_ASSERT_EQUAL_UINT8(0x00, read_memory8(&mem, DIV_REG_ADDR));
