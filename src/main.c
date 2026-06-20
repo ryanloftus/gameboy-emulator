@@ -44,9 +44,6 @@ int main(int argc, char *argv[])
                                              SDL_TEXTUREACCESS_STREAMING, WIDTH, HEIGHT);
 
     uint32_t frame_buffer[WIDTH*HEIGHT];
-    for (int y=0; y<HEIGHT; y++)
-        for (int x=0; x<WIDTH; x++)
-            frame_buffer[y*WIDTH + x] = (x ^ y) * 0x010101FF; // test pattern
 
     memory mem;
     init_memory(&mem, rom_path);

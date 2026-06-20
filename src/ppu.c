@@ -2,7 +2,7 @@
 
 #define NUM_TILES 384
 
-typedef struct 
+typedef struct
 {
     // each pixel should be in the range [0,3]
     uint8_t pixel[8][8];
@@ -12,15 +12,15 @@ void populate_tiles(memory *mem, tile *tiles)
 {
     for (int i = 0; i < NUM_TILES; ++i)
     {
-        uint16_t tile_start = i * sizeof(tile);
+        uint16_t tile_start = i * 16;
         for (int row = 0; row < 8; ++row)
         {
             uint8_t b1 = mem->video_ram[tile_start + row * 2];
             uint8_t b2 = mem->video_ram[tile_start + row * 2 + 1];
             for (int col = 0; col < 8; ++col)
             {
-                uint8_t lowbit = (b1 >> col) & 1;
-                uint8_t highbit = (b2 >> col) & 1;
+                uint8_t lowbit = (b1 >> (7-col)) & 1;
+                uint8_t highbit = (b2 >> (7-col)) & 1;
                 tiles[i].pixel[row][col] = (highbit << 1) | lowbit;
             }
         }
@@ -34,12 +34,11 @@ uint8_t *tile_map_start(memory *mem)
 
 tile *get_tile(tile *tiles, uint8_t addressing_mode, uint8_t id)
 {
-    if (addressing_mode)
-    {
+    if (id >= 128 || addressing_mode) {
         return &(tiles[id]);
     }
-    
-    return &(tiles[128 + (int8_t)id]);
+
+    return &(tiles[256 + (uint16_t)id]);
 }
 
 uint32_t get_color(uint8_t pixel)
@@ -57,7 +56,7 @@ uint32_t get_color(uint8_t pixel)
 void render_background(memory *mem, uint32_t *frame_buffer, uint8_t width, uint8_t height)
 {
     tile tiles[NUM_TILES];
-    populate_tiles(mem, &tiles);
+    populate_tiles(mem, tiles);
 
     uint8_t yoffset = mem->raw[0xFF42];
     uint8_t xoffset = mem->raw[0xFF43];
