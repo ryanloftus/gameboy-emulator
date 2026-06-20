@@ -99,6 +99,7 @@ void test_sub_imm8_half_borrow(void);
 void test_sbc_imm8(void);
 void test_sbc_imm8_borrow_with_carry(void);
 void test_sbc_imm8_zero(void);
+void test_sbc_imm8_half_borrow_when_low_nibble_wraps(void);
 void test_and_imm8(void);
 void test_and_imm8_zero(void);
 void test_xor_imm8(void);
@@ -388,6 +389,7 @@ int main(void)
     RUN_TEST(test_sbc_imm8);
     RUN_TEST(test_sbc_imm8_borrow_with_carry);
     RUN_TEST(test_sbc_imm8_zero);
+    RUN_TEST(test_sbc_imm8_half_borrow_when_low_nibble_wraps);
     RUN_TEST(test_and_imm8);
     RUN_TEST(test_and_imm8_zero);
     RUN_TEST(test_xor_imm8);

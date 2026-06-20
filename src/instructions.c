@@ -172,7 +172,7 @@ static void alu_sbc_a_r8(virtual_cpu *cpu, uint8_t operand)
     flags_write(cpu,
         result == 0,
         1,
-        (a & 0x0F) < ((uint8_t)subtrahend & 0x0F),
+        (a & 0x0F) < ((operand & 0x0F) + carry),
         (uint16_t)a < subtrahend);
 }
 

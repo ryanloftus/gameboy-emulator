@@ -202,6 +202,20 @@ void test_sbc_imm8_zero(void)
     assert_flags(&cpu, 1, 1, 0, 0);
 }
 
+void test_sbc_imm8_half_borrow_when_low_nibble_wraps(void)
+{
+    virtual_cpu cpu;
+    uint8_t code[] = {0xDE, 0x0F};
+
+    cpu_test_reset(&cpu, NULL, code);
+    cpu.a = 0x00;
+    cpu.f = F_C;
+    cpu_test_run(&cpu);
+
+    TEST_ASSERT_EQUAL_UINT8(0xF0, cpu.a);
+    assert_flags(&cpu, 0, 1, 1, 1);
+}
+
 /* AND A,imm8 — Flags: Z=Set if result 0, N=0, H=1, C=0 */
 void test_and_imm8(void)
 {
