@@ -74,7 +74,8 @@ static void set_ram_enable(cartridge *cart, uint8_t value)
 static uint16_t sanitize_addr(uint16_t addr)
 {
     if (addr >= 0xFEA0 && addr <= 0xFEFF) {
-        debug_assert(0 && "access to prohibited memory region 0xFEA0-0xFEFF");
+        // TODO: what should we do here? Apparently tetris does this...
+        // debug_assert(0 && "access to prohibited memory region 0xFEA0-0xFEFF");
     }
 
     if (addr >= 0xE000 && addr <= 0xFDFF) {

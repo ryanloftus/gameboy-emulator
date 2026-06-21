@@ -7,12 +7,12 @@
 #include <string.h>
 #include <SDL.h>
 
-#define WIDTH 160
-#define HEIGHT 144
 #define SCALE 4
 
 /* One Game Boy frame is 154 scanlines × 456 T-cycles = 70224 T-cycles */
-#define CYCLES_PER_FRAME 70224
+#define CYCLES_PER_DOT 4
+#define DOTS_PER_SCANLINE 456
+#define SCANLINES_PER_FRAME 154
 
 int main(int argc, char *argv[])
 {
@@ -43,8 +43,6 @@ int main(int argc, char *argv[])
     SDL_Texture *texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888,
                                              SDL_TEXTUREACCESS_STREAMING, WIDTH, HEIGHT);
 
-    uint32_t frame_buffer[WIDTH*HEIGHT];
-
     memory mem;
     init_memory(&mem, rom_path);
 
@@ -52,7 +50,11 @@ int main(int argc, char *argv[])
     create_virtual_cpu(&cpu, &mem);
     cpu.pc = 0x100;
 
-    uint64_t next_vblank = CYCLES_PER_FRAME;
+    ppu ppu;
+    init_ppu(&ppu, &mem);
+
+    uint64_t next_render = 0;
+    uint64_t next_vblank = 0;
 
     int running = 1;
     SDL_Event event;
@@ -62,21 +64,23 @@ int main(int argc, char *argv[])
         }
 
         /* Run CPU instructions until we reach the next VBlank boundary */
-        while (cpu.cycles < next_vblank) {
+        while (cpu.cycles < next_render) {
             fetch_execute(&cpu);
         }
-        next_vblank += CYCLES_PER_FRAME;
 
-        /* Render the completed frame */
-        render(&mem, frame_buffer, WIDTH, HEIGHT);
+        next_render += CYCLES_PER_DOT * DOTS_PER_SCANLINE;
+        render(&ppu);
 
-        /* Signal VBlank interrupt (IF bit 0) — occurs ~59.7 times a second */
-        // mem.io_registers[(IF_REG_ADDR) & 0xFF] |= 0x01; // TODO: am i using vblank correctly?
+        if (cpu.cycles >= next_vblank) {
+            SDL_UpdateTexture(texture, NULL, ppu.frame_buffer, WIDTH * sizeof(uint32_t));
+            SDL_RenderClear(renderer);
+            SDL_RenderCopy(renderer, texture, NULL, NULL);
+            SDL_RenderPresent(renderer);
+            next_vblank += SCANLINES_PER_FRAME * DOTS_PER_SCANLINE * CYCLES_PER_DOT;
+            /* Signal VBlank interrupt (IF bit 0) — occurs ~59.7 times a second */
+            mem.io_registers[(IF_REG_ADDR) & 0xFF] |= 0x01; // TODO: am i using vblank correctly?
+        }
 
-        SDL_UpdateTexture(texture, NULL, frame_buffer, WIDTH * sizeof(uint32_t));
-        SDL_RenderClear(renderer);
-        SDL_RenderCopy(renderer, texture, NULL, NULL);
-        SDL_RenderPresent(renderer);
     }
 
     destroy_memory(&mem);
