@@ -294,6 +294,24 @@ void test_mbc1_ram_not_allocated_returns_ff(void);
 void test_mbc1_rom_bank_1_default_distinct_pattern(void);
 void test_mbc1_ram_bank_wraps_modulo(void);
 
+void test_mbc2_rom_bank_0_always_physical_zero(void);
+void test_mbc2_rom_bank_zero_maps_to_one(void);
+void test_mbc2_rom_bank_select_odd_addresses(void);
+void test_mbc2_ram_enable_even_addresses(void);
+void test_mbc2_ram_four_bit_storage(void);
+void test_mbc2_ram_echo_region(void);
+
+void test_mbc3_rom_bank_default_and_zero_maps_to_one(void);
+void test_mbc3_select_rom_bank_seven_bits(void);
+void test_mbc3_ram_enable_and_bank_switch(void);
+void test_mbc3_rtc_register_write_and_latched_read(void);
+void test_mbc3_rtc_select_overrides_ram_access(void);
+
+void test_mbc5_rom_bank_zero_is_valid(void);
+void test_mbc5_select_rom_bank_low_and_high(void);
+void test_mbc5_ram_enable_and_bank_switch(void);
+void test_mbc5_rumble_cart_masks_ram_bank(void);
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -580,6 +598,24 @@ int main(void)
     RUN_TEST(test_mbc1_ram_not_allocated_returns_ff);
     RUN_TEST(test_mbc1_rom_bank_1_default_distinct_pattern);
     RUN_TEST(test_mbc1_ram_bank_wraps_modulo);
+
+    RUN_TEST(test_mbc2_rom_bank_0_always_physical_zero);
+    RUN_TEST(test_mbc2_rom_bank_zero_maps_to_one);
+    RUN_TEST(test_mbc2_rom_bank_select_odd_addresses);
+    RUN_TEST(test_mbc2_ram_enable_even_addresses);
+    RUN_TEST(test_mbc2_ram_four_bit_storage);
+    RUN_TEST(test_mbc2_ram_echo_region);
+
+    RUN_TEST(test_mbc3_rom_bank_default_and_zero_maps_to_one);
+    RUN_TEST(test_mbc3_select_rom_bank_seven_bits);
+    RUN_TEST(test_mbc3_ram_enable_and_bank_switch);
+    RUN_TEST(test_mbc3_rtc_register_write_and_latched_read);
+    RUN_TEST(test_mbc3_rtc_select_overrides_ram_access);
+
+    RUN_TEST(test_mbc5_rom_bank_zero_is_valid);
+    RUN_TEST(test_mbc5_select_rom_bank_low_and_high);
+    RUN_TEST(test_mbc5_ram_enable_and_bank_switch);
+    RUN_TEST(test_mbc5_rumble_cart_masks_ram_bank);
 
     return UNITY_END();
 }

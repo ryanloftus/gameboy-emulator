@@ -11,6 +11,7 @@ _deps
 CMakeUserPresets.json
 .vscode
 .cache
+.DS_Store
 
 build/
 *.o

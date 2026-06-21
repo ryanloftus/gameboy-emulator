@@ -414,3 +414,283 @@ void test_mbc1_ram_bank_wraps_modulo(void)
     TEST_ASSERT_EQUAL_UINT8(0xCC, mem.cartridge.ram[1 * EXT_RAM_BANK_SIZE]); /* bank 1 */
     TEST_ASSERT_EQUAL_UINT8(0x00, mem.cartridge.ram[0 * EXT_RAM_BANK_SIZE]); /* bank 0 unchanged */
 }
+
+/* ------------------------------------------------------------------ */
+/*  MBC2 tests                                                        */
+/* ------------------------------------------------------------------ */
+
+static void setup_mbc2_cartridge(memory *mem, size_t rom_size, size_t ram_size)
+{
+    memset(mem, 0, sizeof(*mem));
+
+    mem->cartridge.mbc_type = 0x05;
+    mem->cartridge.rom_size = rom_size;
+    mem->cartridge.rom = calloc(1, rom_size);
+    TEST_ASSERT_NOT_NULL(mem->cartridge.rom);
+
+    for (size_t b = 0; b < rom_size / ROM_BANK_SIZE; b++) {
+        for (size_t o = 0; o < ROM_BANK_SIZE; o++) {
+            mem->cartridge.rom[b * ROM_BANK_SIZE + o] =
+                (uint8_t)((b * ROM_BANK_SIZE + o) & 0xFF);
+        }
+    }
+
+    mem->cartridge.current_rom_bank = 1;
+
+    if (ram_size > 0) {
+        mem->cartridge.ram_size = ram_size;
+        mem->cartridge.ram = calloc(1, ram_size);
+        TEST_ASSERT_NOT_NULL(mem->cartridge.ram);
+    }
+}
+
+void test_mbc2_rom_bank_0_always_physical_zero(void)
+{
+    setup_mbc2_cartridge(&mem, 4 * ROM_BANK_SIZE, MBC2_RAM_SIZE);
+    write_memory8(&mem, 0x0100, 0x03);
+
+    mem.cartridge.rom[0] = 0xAA;
+    mem.cartridge.rom[3 * ROM_BANK_SIZE] = 0xBB;
+
+    TEST_ASSERT_EQUAL_UINT8(0xAA, read_memory8(&mem, 0x0000));
+    TEST_ASSERT_EQUAL_UINT8(0xBB, read_memory8(&mem, 0x4000));
+}
+
+void test_mbc2_rom_bank_zero_maps_to_one(void)
+{
+    setup_mbc2_cartridge(&mem, 4 * ROM_BANK_SIZE, 0);
+    write_memory8(&mem, 0x0100, 0x00);
+    TEST_ASSERT_EQUAL_UINT8(1, mem.cartridge.current_rom_bank);
+
+    mem.cartridge.rom[ROM_BANK_SIZE] = 0xCC;
+    TEST_ASSERT_EQUAL_UINT8(0xCC, read_memory8(&mem, 0x4000));
+}
+
+void test_mbc2_rom_bank_select_odd_addresses(void)
+{
+    setup_mbc2_cartridge(&mem, 16 * ROM_BANK_SIZE, 0);
+    write_memory8(&mem, 0x2100, 0x0F);
+    TEST_ASSERT_EQUAL_UINT8(15, mem.cartridge.current_rom_bank);
+
+    mem.cartridge.rom[15 * ROM_BANK_SIZE] = 0xDD;
+    TEST_ASSERT_EQUAL_UINT8(0xDD, read_memory8(&mem, 0x4000));
+}
+
+void test_mbc2_ram_enable_even_addresses(void)
+{
+    setup_mbc2_cartridge(&mem, 2 * ROM_BANK_SIZE, MBC2_RAM_SIZE);
+
+    write_memory8(&mem, 0xA000, 0x55);
+    TEST_ASSERT_EQUAL_UINT8(0xFF, read_memory8(&mem, 0xA000));
+
+    write_memory8(&mem, 0x0000, 0x0A);
+    TEST_ASSERT_EQUAL_UINT8(0x0A, mem.cartridge.ram_enable);
+
+    write_memory8(&mem, 0xA000, 0x05);
+    TEST_ASSERT_EQUAL_UINT8(0xF5, read_memory8(&mem, 0xA000));
+    TEST_ASSERT_EQUAL_UINT8(0x05, mem.cartridge.ram[0]);
+}
+
+void test_mbc2_ram_four_bit_storage(void)
+{
+    setup_mbc2_cartridge(&mem, 2 * ROM_BANK_SIZE, MBC2_RAM_SIZE);
+    write_memory8(&mem, 0x0000, 0x0A);
+
+    write_memory8(&mem, 0xA000, 0xA7);
+    TEST_ASSERT_EQUAL_UINT8(0xF7, read_memory8(&mem, 0xA000));
+    TEST_ASSERT_EQUAL_UINT8(0x07, mem.cartridge.ram[0]);
+}
+
+void test_mbc2_ram_echo_region(void)
+{
+    setup_mbc2_cartridge(&mem, 2 * ROM_BANK_SIZE, MBC2_RAM_SIZE);
+    write_memory8(&mem, 0x0000, 0x0A);
+
+    write_memory8(&mem, 0xA100, 0x03);
+    TEST_ASSERT_EQUAL_UINT8(0xF3, read_memory8(&mem, 0xA100));
+    TEST_ASSERT_EQUAL_UINT8(0xF3, read_memory8(&mem, 0xA300));
+    TEST_ASSERT_EQUAL_UINT8(0x03, mem.cartridge.ram[0x100]);
+}
+
+/* ------------------------------------------------------------------ */
+/*  MBC3 tests                                                        */
+/* ------------------------------------------------------------------ */
+
+static void setup_mbc3_cartridge(memory *mem, size_t rom_size, size_t ram_size)
+{
+    memset(mem, 0, sizeof(*mem));
+
+    mem->cartridge.mbc_type = 0x13;
+    mem->cartridge.rom_size = rom_size;
+    mem->cartridge.rom = calloc(1, rom_size);
+    TEST_ASSERT_NOT_NULL(mem->cartridge.rom);
+
+    for (size_t b = 0; b < rom_size / ROM_BANK_SIZE; b++) {
+        for (size_t o = 0; o < ROM_BANK_SIZE; o++) {
+            mem->cartridge.rom[b * ROM_BANK_SIZE + o] =
+                (uint8_t)((b * ROM_BANK_SIZE + o) & 0xFF);
+        }
+    }
+
+    mem->cartridge.current_rom_bank = 1;
+    mem->cartridge.current_ram_bank = 0;
+
+    if (ram_size > 0) {
+        mem->cartridge.ram_size = ram_size;
+        mem->cartridge.ram = calloc(1, ram_size);
+        TEST_ASSERT_NOT_NULL(mem->cartridge.ram);
+    }
+}
+
+void test_mbc3_rom_bank_default_and_zero_maps_to_one(void)
+{
+    setup_mbc3_cartridge(&mem, 4 * ROM_BANK_SIZE, 0);
+
+    mem.cartridge.rom[ROM_BANK_SIZE] = 0x11;
+    TEST_ASSERT_EQUAL_UINT8(0x11, read_memory8(&mem, 0x4000));
+
+    write_memory8(&mem, 0x2000, 0x00);
+    TEST_ASSERT_EQUAL_UINT8(1, mem.cartridge.current_rom_bank);
+    TEST_ASSERT_EQUAL_UINT8(0x11, read_memory8(&mem, 0x4000));
+}
+
+void test_mbc3_select_rom_bank_seven_bits(void)
+{
+    setup_mbc3_cartridge(&mem, 128 * ROM_BANK_SIZE, 0);
+    write_memory8(&mem, 0x2000, 0x7F);
+    TEST_ASSERT_EQUAL_UINT8(127, mem.cartridge.current_rom_bank);
+
+    mem.cartridge.rom[127 * ROM_BANK_SIZE] = 0x22;
+    TEST_ASSERT_EQUAL_UINT8(0x22, read_memory8(&mem, 0x4000));
+}
+
+void test_mbc3_ram_enable_and_bank_switch(void)
+{
+    setup_mbc3_cartridge(&mem, 2 * ROM_BANK_SIZE, 4 * EXT_RAM_BANK_SIZE);
+
+    write_memory8(&mem, 0xA000, 0x55);
+    TEST_ASSERT_EQUAL_UINT8(0xFF, read_memory8(&mem, 0xA000));
+
+    write_memory8(&mem, 0x0000, 0x0A);
+    write_memory8(&mem, 0x4000, 0x02);
+
+    write_memory8(&mem, 0xA000, 0x77);
+    TEST_ASSERT_EQUAL_UINT8(0x77, read_memory8(&mem, 0xA000));
+    TEST_ASSERT_EQUAL_UINT8(0x77, mem.cartridge.ram[2 * EXT_RAM_BANK_SIZE]);
+    TEST_ASSERT_EQUAL_UINT8(0x00, mem.cartridge.ram[0]);
+}
+
+void test_mbc3_rtc_register_write_and_latched_read(void)
+{
+    setup_mbc3_cartridge(&mem, 2 * ROM_BANK_SIZE, EXT_RAM_BANK_SIZE);
+    write_memory8(&mem, 0x0000, 0x0A);
+
+    write_memory8(&mem, 0x4000, 0x08);
+    write_memory8(&mem, 0xA000, 0x2A);
+    TEST_ASSERT_EQUAL_UINT8(0x2A, mem.cartridge.rtc_regs[MBC3_RTC_SECONDS]);
+
+    write_memory8(&mem, 0x6000, 0x00);
+    write_memory8(&mem, 0x6000, 0x01);
+    TEST_ASSERT_EQUAL_UINT8(0x2A, read_memory8(&mem, 0xA000));
+
+    write_memory8(&mem, 0xA000, 0x3B);
+    TEST_ASSERT_EQUAL_UINT8(0x2A, read_memory8(&mem, 0xA000));
+    TEST_ASSERT_EQUAL_UINT8(0x3B, mem.cartridge.rtc_regs[MBC3_RTC_SECONDS]);
+}
+
+void test_mbc3_rtc_select_overrides_ram_access(void)
+{
+    setup_mbc3_cartridge(&mem, 2 * ROM_BANK_SIZE, EXT_RAM_BANK_SIZE);
+    write_memory8(&mem, 0x0000, 0x0A);
+    write_memory8(&mem, 0x4000, 0x09);
+
+    write_memory8(&mem, 0xA000, 0x15);
+    write_memory8(&mem, 0x6000, 0x00);
+    write_memory8(&mem, 0x6000, 0x01);
+
+    TEST_ASSERT_EQUAL_UINT8(0x15, read_memory8(&mem, 0xA000));
+    TEST_ASSERT_EQUAL_UINT8(0x00, mem.cartridge.ram[0]);
+}
+
+/* ------------------------------------------------------------------ */
+/*  MBC5 tests                                                        */
+/* ------------------------------------------------------------------ */
+
+static void setup_mbc5_cartridge(memory *mem, size_t rom_size, size_t ram_size)
+{
+    memset(mem, 0, sizeof(*mem));
+
+    mem->cartridge.mbc_type = 0x19;
+    mem->cartridge.rom_size = rom_size;
+    mem->cartridge.rom = calloc(1, rom_size);
+    TEST_ASSERT_NOT_NULL(mem->cartridge.rom);
+
+    for (size_t b = 0; b < rom_size / ROM_BANK_SIZE; b++) {
+        for (size_t o = 0; o < ROM_BANK_SIZE; o++) {
+            mem->cartridge.rom[b * ROM_BANK_SIZE + o] =
+                (uint8_t)((b * ROM_BANK_SIZE + o) & 0xFF);
+        }
+    }
+
+    if (ram_size > 0) {
+        mem->cartridge.ram_size = ram_size;
+        mem->cartridge.ram = calloc(1, ram_size);
+        TEST_ASSERT_NOT_NULL(mem->cartridge.ram);
+    }
+}
+
+void test_mbc5_rom_bank_zero_is_valid(void)
+{
+    setup_mbc5_cartridge(&mem, 4 * ROM_BANK_SIZE, 0);
+
+    mem.cartridge.rom[0] = 0xAA;
+    mem.cartridge.rom[ROM_BANK_SIZE] = 0xBB;
+
+    TEST_ASSERT_EQUAL_UINT8(0x00, mem.cartridge.current_rom_bank);
+    TEST_ASSERT_EQUAL_UINT8(0xAA, read_memory8(&mem, 0x4000));
+}
+
+void test_mbc5_select_rom_bank_low_and_high(void)
+{
+    setup_mbc5_cartridge(&mem, 512 * ROM_BANK_SIZE, 0);
+
+    write_memory8(&mem, 0x2000, 0x34);
+    write_memory8(&mem, 0x3000, 0x01);
+
+    TEST_ASSERT_EQUAL_UINT8(0x34, mem.cartridge.bank_reg_1);
+    TEST_ASSERT_EQUAL_UINT8(0x01, mem.cartridge.rom_bank_hi);
+    TEST_ASSERT_EQUAL_UINT16(0x134, mem.cartridge.current_rom_bank);
+
+    mem.cartridge.rom[0x134 * ROM_BANK_SIZE] = 0xEE;
+    TEST_ASSERT_EQUAL_UINT8(0xEE, read_memory8(&mem, 0x4000));
+}
+
+void test_mbc5_ram_enable_and_bank_switch(void)
+{
+    setup_mbc5_cartridge(&mem, 2 * ROM_BANK_SIZE, 4 * EXT_RAM_BANK_SIZE);
+
+    write_memory8(&mem, 0xA000, 0x55);
+    TEST_ASSERT_EQUAL_UINT8(0xFF, read_memory8(&mem, 0xA000));
+
+    write_memory8(&mem, 0x0000, 0x0A);
+    write_memory8(&mem, 0x4000, 0x03);
+
+    write_memory8(&mem, 0xA000, 0x99);
+    TEST_ASSERT_EQUAL_UINT8(0x99, read_memory8(&mem, 0xA000));
+    TEST_ASSERT_EQUAL_UINT8(0x99, mem.cartridge.ram[3 * EXT_RAM_BANK_SIZE]);
+}
+
+void test_mbc5_rumble_cart_masks_ram_bank(void)
+{
+    setup_mbc5_cartridge(&mem, 2 * ROM_BANK_SIZE, 8 * EXT_RAM_BANK_SIZE);
+    mem.cartridge.mbc_type = 0x1E;
+
+    write_memory8(&mem, 0x0000, 0x0A);
+    write_memory8(&mem, 0x4000, 0x0B);
+
+    TEST_ASSERT_EQUAL_UINT8(0x0B, mem.cartridge.bank_reg_2);
+    TEST_ASSERT_EQUAL_UINT8(3, mem.cartridge.current_ram_bank);
+
+    write_memory8(&mem, 0xA000, 0x44);
+    TEST_ASSERT_EQUAL_UINT8(0x44, mem.cartridge.ram[3 * EXT_RAM_BANK_SIZE]);
+}

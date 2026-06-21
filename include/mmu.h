@@ -53,6 +53,31 @@
 #define MBC1_MODE_SELECT_START 0x6000
 #define MBC1_MODE_SELECT_END   0x7FFF
 
+/* Shared MBC register address ranges (MBC3/MBC5) */
+#define MBC_RAM_ENABLE_START   0x0000
+#define MBC_RAM_ENABLE_END     0x1FFF
+#define MBC_ROM_BANK_START     0x2000
+#define MBC_ROM_BANK_END       0x3FFF
+#define MBC_RAM_BANK_START     0x4000
+#define MBC_RAM_BANK_END       0x5FFF
+#define MBC_LATCH_CLOCK_START  0x6000
+#define MBC_LATCH_CLOCK_END    0x7FFF
+
+/* MBC5-specific ROM bank high bit register */
+#define MBC5_ROM_BANK_HI_START 0x3000
+#define MBC5_ROM_BANK_HI_END   0x3FFF
+
+/* MBC2 built-in RAM: 512 x 4-bit values */
+#define MBC2_RAM_SIZE          512
+
+/* MBC3 RTC register indices (selected via RAM bank register 0x08-0x0C) */
+#define MBC3_RTC_SECONDS       0
+#define MBC3_RTC_MINUTES       1
+#define MBC3_RTC_HOURS         2
+#define MBC3_RTC_DAY_LOW       3
+#define MBC3_RTC_DAY_HIGH      4
+#define MBC3_RTC_REG_COUNT     5
+
 /* ROM sizes from header byte 0x0148 */
 static const size_t rom_sizes[] = {
     2 * ROM_BANK_SIZE,     /* 00: 32 KB */
@@ -99,14 +124,20 @@ typedef struct cartridge
     /* MBC type from header */
     uint8_t mbc_type;
 
-    /* MBC1 Registers */
-    uint8_t ram_enable;      /* RAM enable flag (written to 0x0000-0x1FFF, enabled when == 0x0A) */
-    uint8_t bank_reg_1;      /* ROM bank register 1 (lower 5 bits, written to 0x2000-0x3FFF) */
-    uint8_t bank_reg_2;      /* ROM bank register 2 / RAM bank select (lower 2 bits, written to 0x4000-0x5FFF) */
-    uint8_t banking_mode;    /* Banking mode select: 0 = ROM mode, 1 = RAM mode (written to 0x6000-0x7FFF) */
+    /* Shared MBC registers */
+    uint8_t ram_enable;      /* RAM enable flag (enabled when == 0x0A) */
+    uint8_t bank_reg_1;      /* MBC1: ROM lower 5 bits; MBC3: ROM lower 7 bits; MBC5: ROM lower 8 bits */
+    uint8_t bank_reg_2;      /* MBC1: upper ROM/RAM bits; MBC3: RAM/RTC bank select; MBC5: RAM bank (+ rumble bit) */
+    uint8_t banking_mode;    /* MBC1 only: 0 = ROM mode, 1 = RAM mode */
+    uint8_t rom_bank_hi;     /* MBC5 only: 9th bit of ROM bank number */
+
+    /* MBC3 RTC */
+    uint8_t rtc_regs[MBC3_RTC_REG_COUNT];
+    uint8_t rtc_latched[MBC3_RTC_REG_COUNT];
+    uint8_t rtc_latch_ready;
 
     /* Computed current banks */
-    uint8_t current_rom_bank;
+    uint16_t current_rom_bank;
     uint8_t current_ram_bank;
 } cartridge;
 

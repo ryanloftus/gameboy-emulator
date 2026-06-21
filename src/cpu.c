@@ -193,12 +193,7 @@ void fetch_execute(virtual_cpu *cpu)
         } else {
             cpu->cycles += 1;
             update_timers(cpu, 1);
-            if (!cpu->ime && get_pending_interrupts(cpu)) {
-                cpu->is_halted = 0;
-            }
-            if (cpu->is_halted) {
-                return;
-            }
+            return;
         }
     }
 
