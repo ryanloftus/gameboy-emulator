@@ -661,7 +661,7 @@ static void exec_ret_cond(virtual_cpu *cpu, const instr_operands *ops)
     if (taken)
     {
         exec_ret(cpu);
-        cpu->cycles += 1; /* conditional taken: +1 cycle */
+        cpu->cycles += 3; /* conditional taken: 2 -> 5 cycles */
     }
 }
 
@@ -700,7 +700,7 @@ static void exec_jp_cond(virtual_cpu *cpu, const instr_operands *ops)
         cpu->pc = addr;
         /* fetch_execute adds bytes (3) after execution, so subtract 3 */
         cpu->pc -= 3;
-        cpu->cycles += 1; /* conditional taken: +1 cycle */
+        cpu->cycles += 1; /* conditional taken: 3 -> 4 cycles */
     }
 }
 
@@ -744,7 +744,7 @@ static void exec_call_cond(virtual_cpu *cpu, const instr_operands *ops)
         cpu->pc = addr;
         /* fetch_execute adds bytes (3) after execution, so subtract 3 */
         cpu->pc -= 3;
-        cpu->cycles += 1; /* conditional taken: +1 cycle */
+        cpu->cycles += 3; /* conditional taken: 3 -> 6 cycles */
     }
 }
 

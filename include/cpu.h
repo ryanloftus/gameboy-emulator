@@ -52,5 +52,7 @@ typedef struct virtual_cpu
 void create_virtual_cpu(virtual_cpu *cpu, memory *mem);
 void fetch_execute(virtual_cpu *cpu);
 void update_timers(virtual_cpu *cpu, uint16_t cycles_elapsed);
+void tima_on_tac_write(memory *mem, uint8_t old_tac, uint8_t new_tac);
+void tima_on_div_write(memory *mem);
 
 #endif

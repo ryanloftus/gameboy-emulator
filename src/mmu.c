@@ -1,4 +1,5 @@
 #include "mmu.h"
+#include "cpu.h"
 #include "debug.h"
 
 #include <memory.h>
@@ -669,7 +670,21 @@ void write_memory8(memory *mem, uint16_t addr, uint8_t value)
 {
     /* Writing any value to DIV resets the internal divider counter */
     if (addr == DIV_REG_ADDR) {
-        mem->div_counter = 0;
+        tima_on_div_write(mem);
+        return;
+    }
+
+    if (addr == TIMA_REG_ADDR) {
+        addr = sanitize_addr(addr);
+        mem->raw[addr] = value;
+        return;
+    }
+
+    if (addr == TAC_REG_ADDR) {
+        uint8_t old_tac = mem->io_registers[TAC_REG_ADDR & 0xFF];
+        addr = sanitize_addr(addr);
+        mem->raw[addr] = value;
+        tima_on_tac_write(mem, old_tac, value);
         return;
     }
 

@@ -18,17 +18,17 @@ static const uint8_t nop_code[] = { 0x00 };
  * Configure the timer such that the next call to update_timers with
  * NOP's cycle count (1) will cause a TIMA overflow.
  *
- * Uses the fastest clock (threshold=16) and pre-sets tima_accum so
- * that 1 more cycle causes an increment from 0xFF -> overflow.
+ * Uses the fastest clock and positions DIV so the next M-cycle
+ * causes a TIMA overflow.
  */
 static void setup_timer_overflow_on_nop(virtual_cpu *cpu)
 {
     memory *mem = cpu->mem;
-    mem->io_registers[IO_IDX(TAC_REG_ADDR)] = 0x05;   /* enable=1, clock=01 => threshold=16 T-cycles */
-    mem->io_registers[IO_IDX(TIMA_REG_ADDR)] = 0xFF;  /* right before overflow */
-    mem->io_registers[IO_IDX(TMA_REG_ADDR)] = 0x00;   /* reload value */
-    mem->tima_accum = 12;  /* 12 + 4 (NOP T-cycles) = 16 = threshold */
-    mem->div_counter = 0;
+    mem->io_registers[IO_IDX(TAC_REG_ADDR)] = 0x05;   /* enable=1, clock=01 */
+    mem->io_registers[IO_IDX(TIMA_REG_ADDR)] = 0xFF;
+    mem->io_registers[IO_IDX(TMA_REG_ADDR)] = 0x00;
+    /* Bit 3 of DIV is set; the next M-cycle clears it and increments TIMA */
+    mem->div_counter = 0x0C;
 }
 
 /**
@@ -58,7 +58,7 @@ void test_timer_interrupt_fires_on_overflow(void)
      * fetch_execute sequence:
      *   1. service_interrupts() — checks IE & IF; IF not set yet → skip
      *   2. Execute NOP at pc=0 (4 cycles)
-     *   3. update_timers(4) — tima_accum 12+4=16 → TIMA 0xFF → overflow → IF bit 2 set
+     *   3. update_timers — DIV edge increments TIMA 0xFF → overflow → IF bit 2 set
      */
     fetch_execute(&cpu);
 
@@ -310,11 +310,10 @@ void test_timer_overflow_with_tma_reload_triggers_interrupt(void)
 
     mem.interrupt_enable_register = 0xFF;  /* All interrupts enabled */
     cpu.ime = 1; /* IME enabled */
-    mem.io_registers[IO_IDX(TAC_REG_ADDR)] = 0x05;   /* enable=1, threshold=16 T-cycles */
+    mem.io_registers[IO_IDX(TAC_REG_ADDR)] = 0x05;
     mem.io_registers[IO_IDX(TIMA_REG_ADDR)] = 0xFF;
-    mem.io_registers[IO_IDX(TMA_REG_ADDR)] = 0xAB;   /* TMA reload value */
-    mem.tima_accum = 12;  /* 12 + 4 (NOP T-cycles) = 16 = threshold */
-    mem.div_counter = 0;
+    mem.io_registers[IO_IDX(TMA_REG_ADDR)] = 0xAB;
+    mem.div_counter = 0x0C;
 
     /* First cycle: overflow, TIMA reloads to 0xAB, IF set */
     fetch_execute(&cpu);

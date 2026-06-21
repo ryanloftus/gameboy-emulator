@@ -89,7 +89,7 @@ void test_update_timers_converts_machine_cycles_to_t_cycles(void)
 
     mem.io_registers[IO_IDX(TAC_REG_ADDR)] = 0x05;   /* enable=1, clock=01 => threshold=16 T-cycles */
     mem.io_registers[IO_IDX(TIMA_REG_ADDR)] = 0x00;
-    mem.tima_accum = 0;
+    mem.div_counter = 0;
 
     update_timers(&cpu, 1);
     TEST_ASSERT_EQUAL_UINT16(4, mem.div_counter);
@@ -127,7 +127,7 @@ void test_tima_increments_at_4096hz(void)
     /* TAC: enable=1, clock=00 => 4096 Hz, threshold = 1024 T-cycles */
     mem.io_registers[IO_IDX(TAC_REG_ADDR)] = 0x04;   /* bit 2 set, bits 1-0 = 00 */
     mem.io_registers[IO_IDX(TIMA_REG_ADDR)] = 0x00;
-    mem.tima_accum = 0;
+    mem.div_counter = 0;
 
     /* 255 machine cycles = 1020 T-cycles: no increment */
     update_timers(&cpu, 255);
@@ -153,7 +153,7 @@ void test_tima_increments_at_262144hz(void)
     /* TAC: enable=1, clock=01 => 262144 Hz, threshold = 16 T-cycles */
     mem.io_registers[IO_IDX(TAC_REG_ADDR)] = 0x05;
     mem.io_registers[IO_IDX(TIMA_REG_ADDR)] = 0x00;
-    mem.tima_accum = 0;
+    mem.div_counter = 0;
 
     /* 3 machine cycles: no increment (3 * 4 = 12 T-cycles) */
     update_timers(&cpu, 3);
@@ -175,7 +175,7 @@ void test_tima_increments_at_65536hz(void)
     /* TAC: enable=1, clock=10 => 65536 Hz, threshold = 64 T-cycles */
     mem.io_registers[IO_IDX(TAC_REG_ADDR)] = 0x06;
     mem.io_registers[IO_IDX(TIMA_REG_ADDR)] = 0x00;
-    mem.tima_accum = 0;
+    mem.div_counter = 0;
 
     update_timers(&cpu, 15);
     TEST_ASSERT_EQUAL_UINT8(0, mem.io_registers[IO_IDX(TIMA_REG_ADDR)]);
@@ -195,7 +195,7 @@ void test_tima_increments_at_16384hz(void)
     /* TAC: enable=1, clock=11 => 16384 Hz, threshold = 256 T-cycles */
     mem.io_registers[IO_IDX(TAC_REG_ADDR)] = 0x07;
     mem.io_registers[IO_IDX(TIMA_REG_ADDR)] = 0x00;
-    mem.tima_accum = 0;
+    mem.div_counter = 0;
 
     update_timers(&cpu, 63);
     TEST_ASSERT_EQUAL_UINT8(0, mem.io_registers[IO_IDX(TIMA_REG_ADDR)]);
@@ -218,12 +218,10 @@ void test_tima_overflow_reloads_from_tma_and_triggers_interrupt(void)
     mem.io_registers[IO_IDX(TMA_REG_ADDR)] = 0xAB;
     /* Set TIMA to just before overflow */
     mem.io_registers[IO_IDX(TIMA_REG_ADDR)] = 0xFF;
-    /* Clear IF timer flag */
     mem.io_registers[IO_IDX(IF_REG_ADDR)] = 0;
-    mem.tima_accum = 0;
+    mem.div_counter = 0x7FC;
 
-    /* 256 machine cycles = 1024 T-cycles: TIMA rolls over from 0xFF to 0, reloads from TMA */
-    update_timers(&cpu, 256);
+    update_timers(&cpu, 1);
 
     /* TIMA should contain the reload value */
     TEST_ASSERT_EQUAL_UINT8(0xAB, mem.io_registers[IO_IDX(TIMA_REG_ADDR)]);
@@ -245,9 +243,9 @@ void test_tima_overflow_preserves_other_if_bits(void)
     mem.io_registers[IO_IDX(TIMA_REG_ADDR)] = 0xFF;
     /* Set VBlank and LCDC interrupt flags (bits 0 and 1) */
     mem.io_registers[IO_IDX(IF_REG_ADDR)] = 0x03;
-    mem.tima_accum = 0;
+    mem.div_counter = 0x7FC;
 
-    update_timers(&cpu, 256);
+    update_timers(&cpu, 1);
 
     /* Timer bit (2) set, existing bits 0 and 1 preserved */
     TEST_ASSERT_EQUAL_UINT8(0x07, mem.io_registers[IO_IDX(IF_REG_ADDR)]);
@@ -268,7 +266,7 @@ void test_tac_clock_select_works_with_enable(void)
     for (int i = 0; i < 4; i++) {
         mem.io_registers[IO_IDX(TAC_REG_ADDR)] = clocks[i];
         mem.io_registers[IO_IDX(TIMA_REG_ADDR)] = 0x00;
-        mem.tima_accum = 0;
+        mem.div_counter = 0;
 
         /* Just under threshold — no increment */
         update_timers(&cpu, thresholds[i] - 1);
@@ -294,7 +292,7 @@ void test_multiple_tima_increments_in_one_call(void)
     /* Fastest clock: threshold = 16 */
     mem.io_registers[IO_IDX(TAC_REG_ADDR)] = 0x05;   /* enable=1, clock=01 */
     mem.io_registers[IO_IDX(TIMA_REG_ADDR)] = 0x00;
-    mem.tima_accum = 0;
+    mem.div_counter = 0;
 
     /* 12 cycles = 3 increments */
     update_timers(&cpu, 12);
@@ -314,7 +312,7 @@ void test_multiple_overflow_in_one_call(void)
     mem.io_registers[IO_IDX(TMA_REG_ADDR)] = 0x42;
     mem.io_registers[IO_IDX(TIMA_REG_ADDR)] = 0xFE;  /* 2 away from overflow */
     mem.io_registers[IO_IDX(IF_REG_ADDR)] = 0;
-    mem.tima_accum = 0;
+    mem.div_counter = 0;
 
     /* 12 cycles = 3 increments: FE -> FF -> overflow! (reload to 0x42, set IF) -> 0x43 */
     update_timers(&cpu, 12);
@@ -358,7 +356,7 @@ void test_tima_persists_across_toggle(void)
     /* Enable timer, increment once */
     mem.io_registers[IO_IDX(TAC_REG_ADDR)] = 0x05;   /* enable=1, threshold=16 T-cycles */
     mem.io_registers[IO_IDX(TIMA_REG_ADDR)] = 0x00;
-    mem.tima_accum = 0;
+    mem.div_counter = 0;
 
     update_timers(&cpu, 4);
     TEST_ASSERT_EQUAL_UINT8(1, mem.io_registers[IO_IDX(TIMA_REG_ADDR)]);

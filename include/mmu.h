@@ -165,7 +165,6 @@ typedef struct memory
 
     /* Internal timer state (not memory-mapped) */
     uint16_t div_counter;   /* Internal 16-bit divider counter, incremented every T-cycle */
-    uint16_t tima_accum;    /* Accumulator counting T-cycles for TIMA increments */
 } memory;
 
 void init_memory(memory *mem, const char *rom_path);

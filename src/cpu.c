@@ -6,13 +6,8 @@
 #include <stdio.h>
 #include <string.h>
 
-/* Timer clock thresholds (T-cycles per TIMA increment) for TAC bits 1-0 */
-static const uint16_t tima_thresholds[] = {
-    1024,   /* 00: 4096 Hz */
-    16,     /* 01: 262144 Hz */
-    64,     /* 10: 65536 Hz */
-    256     /* 11: 16384 Hz */
-};
+/* DIV counter bit indices selected by TAC clock bits 1-0 */
+static const uint8_t div_bit[] = { 9, 3, 5, 7 };
 
 /** Interrupt vector addresses */
 #define INT_VBLANK  0x40
@@ -96,37 +91,68 @@ static uint8_t service_interrupts(virtual_cpu *cpu)
     return 1;
 }
 
+static void tima_increment(memory *mem)
+{
+    uint8_t tima = mem->io_registers[TIMA_REG_ADDR & 0xFF];
+    if (tima == 0xFF) {
+        mem->io_registers[TIMA_REG_ADDR & 0xFF] = mem->io_registers[TMA_REG_ADDR & 0xFF];
+        mem->io_registers[IF_REG_ADDR & 0xFF] |= 0x04;
+        return;
+    }
+
+    mem->io_registers[TIMA_REG_ADDR & 0xFF] = (uint8_t)(tima + 1);
+}
+
+static bool div_bit_is_set(uint16_t div, uint8_t clock_select)
+{
+    return (div & (uint16_t)(1u << div_bit[clock_select])) != 0;
+}
+
+static void tima_edge_tick(memory *mem, uint16_t old_div, uint16_t new_div, uint8_t tac)
+{
+    if ((tac & 0x04) == 0) {
+        return;
+    }
+
+    uint8_t clock_select = tac & 0x03;
+    uint16_t mask = (uint16_t)(1u << div_bit[clock_select]);
+    if ((old_div & mask) != 0 && (new_div & mask) == 0) {
+        tima_increment(mem);
+    }
+}
+
+void tima_on_tac_write(memory *mem, uint8_t old_tac, uint8_t new_tac)
+{
+    /* Changing the selected DIV bit from 1 to 0 triggers a TIMA increment. */
+    if ((old_tac & 0x04) == 0 && (new_tac & 0x04) == 0) {
+        return;
+    }
+
+    uint8_t old_clock = old_tac & 0x03;
+    uint8_t new_clock = new_tac & 0x03;
+    uint16_t div = mem->div_counter;
+
+    if (div_bit_is_set(div, old_clock) && !div_bit_is_set(div, new_clock)) {
+        tima_increment(mem);
+    }
+}
+
+void tima_on_div_write(memory *mem)
+{
+    uint8_t tac = mem->io_registers[TAC_REG_ADDR & 0xFF];
+    uint16_t old_div = mem->div_counter;
+    mem->div_counter = 0;
+    tima_edge_tick(mem, old_div, 0, tac);
+}
+
 void update_timers(virtual_cpu *cpu, uint16_t cycles_elapsed)
 {
     memory *mem = cpu->mem;
-    uint8_t tac = mem->io_registers[TAC_REG_ADDR & 0xFF];
 
-    /* Instructions report machine cycles (M-cycles); convert to T-cycles for
-     * the hardware timer and divider logic. */
-    uint16_t t_cycles = (uint16_t)((uint32_t)cycles_elapsed * 4u);
-
-    /* Update the internal 16-bit divider counter */
-    mem->div_counter += t_cycles;
-
-    /* Update the TIMA counter */
-    if (tac & 0x04) {
-        uint8_t clock_select = tac & 0x03;
-        uint16_t threshold = tima_thresholds[clock_select];
-
-        mem->tima_accum += t_cycles;
-        while (mem->tima_accum >= threshold) {
-            mem->tima_accum -= threshold;
-
-            /* Increment TIMA */
-            uint8_t tima = mem->io_registers[TIMA_REG_ADDR & 0xFF];
-            tima++;
-            if (tima == 0) {
-                /* Overflow: reload from TMA and request timer interrupt */
-                tima = mem->io_registers[TMA_REG_ADDR & 0xFF];
-                mem->io_registers[IF_REG_ADDR & 0xFF] |= 0x04; /* set timer interrupt flag (bit 2) */
-            }
-            mem->io_registers[TIMA_REG_ADDR & 0xFF] = tima;
-        }
+    for (uint16_t m = 0; m < cycles_elapsed; m++) {
+        uint16_t old_div = mem->div_counter;
+        mem->div_counter += 4;
+        tima_edge_tick(mem, old_div, mem->div_counter, mem->io_registers[TAC_REG_ADDR & 0xFF]);
     }
 }
 
@@ -157,36 +183,47 @@ static bool is_invalid_opcode(uint8_t opcode)
     return false;
 }
 
+static void run_instruction(virtual_cpu *cpu, decoded_instr *dec)
+{
+    if (dec->cycles == 0) {
+        execute_instruction(cpu, dec);
+        return;
+    }
+
+    uint64_t cycles_before = cpu->cycles;
+
+    /* IO reads happen on the last M-cycle; tick the timer for earlier cycles first. */
+    if (dec->cycles > 1) {
+        update_timers(cpu, (uint16_t)(dec->cycles - 1));
+    }
+
+    execute_instruction(cpu, dec);
+    update_timers(cpu, 1);
+
+    /* Conditional branches/returns add a cycle in execute_instruction. */
+    uint16_t extra = (uint16_t)(cpu->cycles - cycles_before);
+    if (extra > 0) {
+        update_timers(cpu, extra);
+    }
+}
+
 void fetch_execute(virtual_cpu *cpu)
 {
     debug_assert(cpu != NULL);
     debug_assert(cpu->mem != NULL);
 
-    /* Service interrupts: if IME is set and there's a pending interrupt,
-     * push PC, jump to vector, and wake from halt. This consumes the
-     * instruction slot (no normal instruction is executed). */
     if (service_interrupts(cpu)) {
-        /* 5-cycle "M1" for interrupt servicing — account for it */
         cpu->cycles += 5;
-        /* No timers update here — timers are updated when the *next*
-         * fetch_execute runs; the 5 M-cycles will be accounted then */
+        update_timers(cpu, 5);
         return;
     }
 
-    /* Apply delayed EI: if EI was scheduled, enable IME now.
-     * This is done AFTER interrupt checking (so no interrupt fires between
-     * EI and the next instruction) but BEFORE the next instruction executes
-     * (so DI can immediately clear it). */
     if (cpu->ei_scheduled)
     {
         cpu->ime = 1;
         cpu->ei_scheduled = 0;
     }
 
-    /* If halted and no interrupt was serviced, burn cycles until the CPU
-     * resumes. With IME set, service_interrupts above handles wake + dispatch.
-     * With IME clear, wake as soon as IE & IF is non-zero but do not call the
-     * interrupt handler. */
     if (cpu->is_halted) {
         if (!cpu->ime && get_pending_interrupts(cpu)) {
             cpu->is_halted = 0;
@@ -203,7 +240,6 @@ void fetch_execute(virtual_cpu *cpu)
 
     decoded_instr dec;
 
-    /* Handle CB prefix */
     if (opcode == 0xCB)
     {
         uint8_t cb_opcode = read_memory8(cpu->mem, cpu->pc + 1);
@@ -214,10 +250,9 @@ void fetch_execute(virtual_cpu *cpu)
             return;
         }
 
-        execute_instruction(cpu, &dec);
+        run_instruction(cpu, &dec);
         cpu->pc += dec.bytes;
         cpu->cycles += dec.cycles;
-        update_timers(cpu, dec.cycles);
         return;
     }
 
@@ -233,8 +268,7 @@ void fetch_execute(virtual_cpu *cpu)
         printf("\n");
     }
 
-    execute_instruction(cpu, &dec);
+    run_instruction(cpu, &dec);
     cpu->pc += dec.bytes;
     cpu->cycles += dec.cycles;
-    update_timers(cpu, dec.cycles);
 }

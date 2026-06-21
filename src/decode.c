@@ -226,6 +226,68 @@ static const opcode_pattern block_zero_patterns[] =
     {0xC7, 0x05, INSTR_DEC_R8},
 };
 
+#define R8_INDIRECT_HL 6u
+
+static void adjust_instruction_cycles(decoded_instr *out)
+{
+    switch (out->id)
+    {
+        case INSTR_INC_R8:
+        case INSTR_DEC_R8:
+            if (out->ops.r8 == R8_INDIRECT_HL) {
+                out->cycles += 2;
+            }
+            break;
+        case INSTR_LD_R8_IMM8:
+            if (out->ops.r8 == R8_INDIRECT_HL) {
+                out->cycles += 1;
+            }
+            break;
+        case INSTR_LD_R8_R8:
+            if (out->ops.r8_src == R8_INDIRECT_HL || out->ops.r8_dest == R8_INDIRECT_HL) {
+                out->cycles += 1;
+            }
+            break;
+        case INSTR_ADD_A_R8:
+        case INSTR_ADC_A_R8:
+        case INSTR_SUB_A_R8:
+        case INSTR_SBC_A_R8:
+        case INSTR_AND_A_R8:
+        case INSTR_XOR_A_R8:
+        case INSTR_OR_A_R8:
+        case INSTR_CP_A_R8:
+            if (out->ops.r8 == R8_INDIRECT_HL) {
+                out->cycles += 1;
+            }
+            break;
+        case INSTR_CB_BIT:
+            if (out->ops.r8 == R8_INDIRECT_HL) {
+                out->cycles += 1;
+            }
+            break;
+        case INSTR_CB_RES:
+        case INSTR_CB_SET:
+            if (out->ops.r8 == R8_INDIRECT_HL) {
+                out->cycles += 2;
+            }
+            break;
+        case INSTR_CB_RLC:
+        case INSTR_CB_RRC:
+        case INSTR_CB_RL:
+        case INSTR_CB_RR:
+        case INSTR_CB_SLA:
+        case INSTR_CB_SRA:
+        case INSTR_CB_SWAP:
+        case INSTR_CB_SRL:
+            if (out->ops.r8 == R8_INDIRECT_HL) {
+                out->cycles += 2;
+            }
+            break;
+        default:
+            break;
+    }
+}
+
 static void fill_decoded(decoded_instr *out, instr_id id, const instr_operands *ops)
 {
     out->id = id;
@@ -239,6 +301,7 @@ static void fill_decoded(decoded_instr *out, instr_id id, const instr_operands *
     {
         out->ops = (instr_operands){0};
     }
+    adjust_instruction_cycles(out);
 }
 
 static bool decode_block_zero(uint8_t opcode, decoded_instr *out)
