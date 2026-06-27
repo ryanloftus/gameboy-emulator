@@ -1,6 +1,7 @@
 #include "mmu.h"
 #include "cpu.h"
 #include "debug.h"
+#include "joypad.h"
 
 #include <memory.h>
 #include <stdbool.h>
@@ -606,10 +607,35 @@ void init_memory(memory *mem, const char *rom_path)
 /*  Joypad (P1 / $FF00)                                                */
 /* ------------------------------------------------------------------ */
 
-static uint8_t read_joypad(const memory *mem)
+static bool is_hram_addr(uint16_t addr)
 {
-    /* raw[$FF00] stores the row-select lines (bits 5-4) from the last write. */
-    return (uint8_t)(0xCF | (mem->raw[JOYPAD_REG_ADDR] & 0x30));
+    return addr >= HIGH_RAM_START && addr <= 0xFFFE;
+}
+
+static bool oam_dma_blocks_cpu_access(const memory *mem, uint16_t addr)
+{
+    return mem->oam_dma_cycles_remaining > 0 && !is_hram_addr(addr);
+}
+
+static uint8_t read_memory8_unblocked(memory *mem, uint16_t addr);
+
+void update_oam_dma(memory *mem)
+{
+    if (mem->oam_dma_cycles_remaining == 0) {
+        return;
+    }
+
+    uint8_t offset = (uint8_t)(OAM_DMA_LENGTH - mem->oam_dma_cycles_remaining);
+    uint16_t src = (uint16_t)(mem->oam_dma_src + offset);
+    mem->object_attribute_memory[offset] = read_memory8_unblocked(mem, src);
+    mem->oam_dma_cycles_remaining--;
+}
+
+static void start_oam_dma(memory *mem, uint8_t value)
+{
+    mem->io_registers[DMA_REG_ADDR & 0xFF] = value;
+    mem->oam_dma_src = (uint16_t)(value << 8);
+    mem->oam_dma_cycles_remaining = OAM_DMA_LENGTH;
 }
 
 static void write_joypad(memory *mem, uint8_t value)
@@ -617,11 +643,16 @@ static void write_joypad(memory *mem, uint8_t value)
     mem->raw[JOYPAD_REG_ADDR] = value & 0x30;
 }
 
+static uint8_t read_joypad(const memory *mem)
+{
+    return joypad_read_p1(mem);
+}
+
 /* ------------------------------------------------------------------ */
 /*  Memory reads & writes                                             */
 /* ------------------------------------------------------------------ */
 
-uint8_t read_memory8(memory *mem, uint16_t addr)
+static uint8_t read_memory8_unblocked(memory *mem, uint16_t addr)
 {
     /* DIV register returns upper 8 bits of internal divider counter */
     if (addr == DIV_REG_ADDR) {
@@ -679,6 +710,15 @@ uint8_t read_memory8(memory *mem, uint16_t addr)
     return mem->raw[addr];
 }
 
+uint8_t read_memory8(memory *mem, uint16_t addr)
+{
+    if (oam_dma_blocks_cpu_access(mem, addr)) {
+        return 0xFF;
+    }
+
+    return read_memory8_unblocked(mem, addr);
+}
+
 uint16_t read_memory16(memory *mem, uint16_t addr)
 {
     uint8_t low = read_memory8(mem, addr);
@@ -688,6 +728,10 @@ uint16_t read_memory16(memory *mem, uint16_t addr)
 
 void write_memory8(memory *mem, uint16_t addr, uint8_t value)
 {
+    if (oam_dma_blocks_cpu_access(mem, addr)) {
+        return;
+    }
+
     /* Writing any value to DIV resets the internal divider counter */
     if (addr == DIV_REG_ADDR) {
         tima_on_div_write(mem);
@@ -769,6 +813,11 @@ void write_memory8(memory *mem, uint16_t addr, uint8_t value)
 
     if (addr == JOYPAD_REG_ADDR) {
         write_joypad(mem, value);
+        return;
+    }
+
+    if (addr == DMA_REG_ADDR) {
+        start_oam_dma(mem, value);
         return;
     }
 

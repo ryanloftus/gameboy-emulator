@@ -39,6 +39,11 @@
 #define SB_REG_ADDR   0xFF01  /* Serial transfer data */
 #define SC_REG_ADDR   0xFF02  /* Serial control */
 
+/* OAM DMA register */
+#define DMA_REG_ADDR  0xFF46
+
+#define OAM_DMA_LENGTH 0xA0
+
 #define ROM_BANK_SIZE 0x4000
 #define EXT_RAM_BANK_SIZE 0x2000
 
@@ -168,6 +173,13 @@ typedef struct memory
 
     /* Internal timer state (not memory-mapped) */
     uint16_t div_counter;   /* Internal 16-bit divider counter, incremented every T-cycle */
+
+    /* OAM DMA state (not memory-mapped) */
+    uint16_t oam_dma_src;              /* Source base address (high byte written to $FF46) << 8 */
+    uint8_t oam_dma_cycles_remaining;  /* M-cycles left; 160-byte transfer when non-zero */
+
+    /* Pressed buttons — see JOYP_* in joypad.h (1 = pressed). */
+    uint8_t joypad_buttons;
 } memory;
 
 void init_memory(memory *mem, const char *rom_path);
@@ -177,5 +189,6 @@ uint16_t read_memory16(memory *mem, uint16_t addr);
 void write_memory8(memory *mem, uint16_t addr, uint8_t value);
 void write_memory16(memory *mem, uint16_t addr, uint16_t value);
 uint8_t* access_memory8(memory *mem, uint16_t addr);
+void update_oam_dma(memory *mem);
 
 #endif

@@ -6,6 +6,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 #include <SDL.h>
 
 #define SCALE 4
@@ -16,6 +17,46 @@
 #define M_CYCLES_PER_SCANLINE (DOTS_PER_SCANLINE / 4)
 #define SCANLINES_PER_FRAME 154
 #define M_CYCLES_PER_FRAME (M_CYCLES_PER_SCANLINE * SCANLINES_PER_FRAME)
+
+/* DMG system clock is 4.194304 MHz → 1.048576 M-cycles per second. */
+#define GB_M_CYCLES_PER_SEC 1048576ULL
+#define THROTTLE_INTERVAL   100ULL
+
+static uint64_t monotonic_ns(void)
+{
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (uint64_t)ts.tv_sec * 1000000000ULL + (uint64_t)ts.tv_nsec;
+}
+
+static void sleep_ns(uint64_t ns)
+{
+    struct timespec req = {
+        .tv_sec = (time_t)(ns / 1000000000ULL),
+        .tv_nsec = (long)(ns % 1000000000ULL),
+    };
+    nanosleep(&req, NULL);
+}
+
+/* Keep emulated time aligned with real time, checking every THROTTLE_INTERVAL M-cycles. */
+static void throttle_pace(uint64_t cpu_cycles, uint64_t *last_cycles, uint64_t *last_ns)
+{
+    uint64_t delta = cpu_cycles - *last_cycles;
+    if (delta < THROTTLE_INTERVAL) {
+        return;
+    }
+
+    uint64_t now = monotonic_ns();
+    uint64_t expected_ns = delta * 1000000000ULL / GB_M_CYCLES_PER_SEC;
+    uint64_t elapsed_ns = now - *last_ns;
+
+    if (elapsed_ns < expected_ns) {
+        sleep_ns(expected_ns - elapsed_ns);
+    }
+
+    *last_cycles = cpu_cycles;
+    *last_ns = monotonic_ns();
+}
 
 int main(int argc, char *argv[])
 {
@@ -73,19 +114,28 @@ int main(int argc, char *argv[])
 
     uint64_t next_render = 0;
     uint64_t next_vblank = M_CYCLES_PER_FRAME;
+    uint64_t throttle_last_cycles = 0;
+    uint64_t throttle_last_ns = monotonic_ns();
 
     int running = 1;
     while (running) {
         if (!g_debug_mode) {
             SDL_Event event;
             while (SDL_PollEvent(&event)) {
-                if (event.type == SDL_QUIT) running = 0;
+                if (event.type == SDL_QUIT) {
+                    running = 0;
+                } else if (event.type == SDL_KEYDOWN || event.type == SDL_KEYUP) {
+                    update_joypad(&joypad, &event);
+                }
             }
         }
 
-        /* Run CPU instructions until we reach the next VBlank boundary */
+        /* Run CPU instructions until we reach the next scanline boundary */
         while (cpu.cycles < next_render) {
             fetch_execute(&cpu);
+            if (!g_debug_mode) {
+                throttle_pace(cpu.cycles, &throttle_last_cycles, &throttle_last_ns);
+            }
         }
 
         next_render += M_CYCLES_PER_SCANLINE;

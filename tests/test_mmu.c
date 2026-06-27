@@ -694,3 +694,85 @@ void test_mbc5_rumble_cart_masks_ram_bank(void)
     write_memory8(&mem, 0xA000, 0x44);
     TEST_ASSERT_EQUAL_UINT8(0x44, mem.cartridge.ram[3 * EXT_RAM_BANK_SIZE]);
 }
+
+void test_oam_dma_copies_160_bytes(void)
+{
+    reset_mem();
+    for (uint8_t i = 0; i < OAM_DMA_LENGTH; i++) {
+        write_memory8(&mem, (uint16_t)(0xC000 + i), (uint8_t)(0x10 + i));
+    }
+
+    write_memory8(&mem, DMA_REG_ADDR, 0xC0);
+
+    TEST_ASSERT_EQUAL_UINT8(0xC0, mem.io_registers[DMA_REG_ADDR & 0xFF]);
+    TEST_ASSERT_EQUAL_UINT16(0xC000, mem.oam_dma_src);
+    TEST_ASSERT_EQUAL_UINT8(OAM_DMA_LENGTH, mem.oam_dma_cycles_remaining);
+
+    for (int i = 0; i < OAM_DMA_LENGTH; i++) {
+        update_oam_dma(&mem);
+    }
+
+    TEST_ASSERT_EQUAL_UINT8(0, mem.oam_dma_cycles_remaining);
+    for (uint8_t i = 0; i < OAM_DMA_LENGTH; i++) {
+        TEST_ASSERT_EQUAL_UINT8((uint8_t)(0x10 + i), mem.object_attribute_memory[i]);
+    }
+}
+
+void test_oam_dma_transfers_one_byte_per_m_cycle(void)
+{
+    reset_mem();
+    write_memory8(&mem, 0xC000, 0xAA);
+    write_memory8(&mem, 0xC001, 0xBB);
+    write_memory8(&mem, DMA_REG_ADDR, 0xC0);
+
+    update_oam_dma(&mem);
+    TEST_ASSERT_EQUAL_UINT8(0xAA, mem.object_attribute_memory[0]);
+    TEST_ASSERT_EQUAL_UINT8(0, mem.object_attribute_memory[1]);
+    TEST_ASSERT_EQUAL_UINT8(OAM_DMA_LENGTH - 1, mem.oam_dma_cycles_remaining);
+
+    update_oam_dma(&mem);
+    TEST_ASSERT_EQUAL_UINT8(0xBB, mem.object_attribute_memory[1]);
+}
+
+void test_oam_dma_blocks_cpu_access_except_hram(void)
+{
+    reset_mem();
+    write_memory8(&mem, 0xC000, 0x42);
+    write_memory8(&mem, 0xFF80, 0x77);
+    write_memory8(&mem, DMA_REG_ADDR, 0xC0);
+
+    TEST_ASSERT_EQUAL_UINT8(0xFF, read_memory8(&mem, 0xC000));
+    TEST_ASSERT_EQUAL_UINT8(0x77, read_memory8(&mem, 0xFF80));
+
+    write_memory8(&mem, 0xC000, 0x99);
+    TEST_ASSERT_EQUAL_UINT8(0x42, mem.raw[0xC000]);
+
+    write_memory8(&mem, 0xFF80, 0x88);
+    TEST_ASSERT_EQUAL_UINT8(0x88, read_memory8(&mem, 0xFF80));
+
+    for (int i = 0; i < OAM_DMA_LENGTH; i++) {
+        update_oam_dma(&mem);
+    }
+
+    TEST_ASSERT_EQUAL_UINT8(0x42, read_memory8(&mem, 0xC000));
+}
+
+void test_oam_dma_restart(void)
+{
+    reset_mem();
+    write_memory8(&mem, 0xC000, 0x11);
+    write_memory8(&mem, 0xD000, 0x22);
+
+    write_memory8(&mem, DMA_REG_ADDR, 0xC0);
+    for (int i = 0; i < OAM_DMA_LENGTH; i++) {
+        update_oam_dma(&mem);
+    }
+    TEST_ASSERT_EQUAL_UINT8(0x11, mem.object_attribute_memory[0]);
+
+    write_memory8(&mem, DMA_REG_ADDR, 0xD0);
+    for (int i = 0; i < OAM_DMA_LENGTH; i++) {
+        update_oam_dma(&mem);
+    }
+
+    TEST_ASSERT_EQUAL_UINT8(0x22, mem.object_attribute_memory[0]);
+}

@@ -150,6 +150,7 @@ void update_timers(virtual_cpu *cpu, uint16_t cycles_elapsed)
     memory *mem = cpu->mem;
 
     for (uint16_t m = 0; m < cycles_elapsed; m++) {
+        update_oam_dma(mem);
         uint16_t old_div = mem->div_counter;
         mem->div_counter += 4;
         tima_edge_tick(mem, old_div, mem->div_counter, mem->io_registers[TAC_REG_ADDR & 0xFF]);

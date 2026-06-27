@@ -311,6 +311,10 @@ void test_mbc5_rom_bank_zero_is_valid(void);
 void test_mbc5_select_rom_bank_low_and_high(void);
 void test_mbc5_ram_enable_and_bank_switch(void);
 void test_mbc5_rumble_cart_masks_ram_bank(void);
+void test_oam_dma_copies_160_bytes(void);
+void test_oam_dma_transfers_one_byte_per_m_cycle(void);
+void test_oam_dma_blocks_cpu_access_except_hram(void);
+void test_oam_dma_restart(void);
 
 int main(void)
 {
@@ -616,6 +620,11 @@ int main(void)
     RUN_TEST(test_mbc5_select_rom_bank_low_and_high);
     RUN_TEST(test_mbc5_ram_enable_and_bank_switch);
     RUN_TEST(test_mbc5_rumble_cart_masks_ram_bank);
+
+    RUN_TEST(test_oam_dma_copies_160_bytes);
+    RUN_TEST(test_oam_dma_transfers_one_byte_per_m_cycle);
+    RUN_TEST(test_oam_dma_blocks_cpu_access_except_hram);
+    RUN_TEST(test_oam_dma_restart);
 
     return UNITY_END();
 }
