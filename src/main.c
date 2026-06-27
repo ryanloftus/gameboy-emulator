@@ -1,6 +1,7 @@
 #include "ppu.h"
 #include "mmu.h"
 #include "cpu.h"
+#include "joypad.h"
 #include "debug.h"
 
 #include <stdio.h>
@@ -53,6 +54,9 @@ int main(int argc, char *argv[])
     ppu ppu;
     init_ppu(&ppu, &mem);
 
+    joypad joypad;
+    init_joypad(&joypad, &mem);
+
     uint64_t next_render = 0;
     uint64_t next_vblank = 0;
 
@@ -76,9 +80,6 @@ int main(int argc, char *argv[])
             SDL_RenderClear(renderer);
             SDL_RenderCopy(renderer, texture, NULL, NULL);
             SDL_RenderPresent(renderer);
-            next_vblank += SCANLINES_PER_FRAME * DOTS_PER_SCANLINE * CYCLES_PER_DOT;
-            /* Signal VBlank interrupt (IF bit 0) — occurs ~59.7 times a second */
-            mem.io_registers[(IF_REG_ADDR) & 0xFF] |= 0x01; // TODO: am i using vblank correctly?
         }
 
     }
