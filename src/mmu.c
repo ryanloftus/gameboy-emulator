@@ -538,8 +538,8 @@ static void load_cartridge(cartridge *cartridge, const char *path)
     /* Parse MBC type from cartridge header */
     if (cartridge->rom_size > MBC_TYPE_ADDR) {
         cartridge->mbc_type = cartridge->rom[MBC_TYPE_ADDR];
-        if (g_debug_mode) {
-            printf("ROM has MBC type %d\n", cartridge->mbc_type);
+        if (g_instr_log) {
+            instr_log_printf("ROM has MBC type %d\n", cartridge->mbc_type);
         }
         debug_assert(cartridge->mbc_type == 0 || is_mapped_mbc(cartridge->mbc_type));
     }
@@ -745,8 +745,7 @@ void write_memory8(memory *mem, uint16_t addr, uint8_t value)
     /* Serial transfer: when SC ($FF02) is written with 0x81, the
      * character in SB ($FF01) is ready to be transmitted */
     if (addr == SC_REG_ADDR && value == 0x81) {
-        putchar(mem->raw[SB_REG_ADDR]);
-        fflush(stdout);
+        serial_transmit_byte(mem->raw[SB_REG_ADDR]);
     }
 
     addr = sanitize_addr(addr);

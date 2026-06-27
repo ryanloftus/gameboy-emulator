@@ -29,11 +29,27 @@ static uint8_t *get_r8(virtual_cpu *cpu, uint8_t r8_id)
         case R8_ID_H: return &cpu->h;
         case R8_ID_L: return &cpu->l;
         case R8_ID_A: return &cpu->a;
-        case R8_ID_MEM_HL: return access_memory8(cpu->mem, cpu->hl);
         default: debug_assert(0);
     }
 
     return NULL;
+}
+
+static uint8_t read_r8(virtual_cpu *cpu, uint8_t r8_id)
+{
+    if (r8_id == R8_ID_MEM_HL) {
+        return read_memory8(cpu->mem, cpu->hl);
+    }
+    return *get_r8(cpu, r8_id);
+}
+
+static void write_r8(virtual_cpu *cpu, uint8_t r8_id, uint8_t value)
+{
+    if (r8_id == R8_ID_MEM_HL) {
+        write_memory8(cpu->mem, cpu->hl, value);
+        return;
+    }
+    *get_r8(cpu, r8_id) = value;
 }
 
 static uint16_t *get_r16(virtual_cpu *cpu, uint8_t r16_id)
@@ -106,20 +122,18 @@ static void flags_write_preserve_c(virtual_cpu *cpu, uint8_t z, uint8_t n, uint8
     flags_write(cpu, z, n, h, c);
 }
 
-static void alu_inc_r8(virtual_cpu *cpu, uint8_t *dest)
+static uint8_t alu_inc_r8(virtual_cpu *cpu, uint8_t value)
 {
-    uint8_t value = *dest;
     uint8_t result = value + 1;
-    *dest = result;
     flags_write_preserve_c(cpu, result == 0, 0, (value & 0x0F) == 0x0F);
+    return result;
 }
 
-static void alu_dec_r8(virtual_cpu *cpu, uint8_t *dest)
+static uint8_t alu_dec_r8(virtual_cpu *cpu, uint8_t value)
 {
-    uint8_t value = *dest;
     uint8_t result = value - 1;
-    *dest = result;
     flags_write_preserve_c(cpu, result == 0, 1, (value & 0x0F) == 0);
+    return result;
 }
 
 static void alu_add_a_r8(virtual_cpu *cpu, uint8_t operand)
@@ -213,12 +227,14 @@ static void exec_nop(virtual_cpu *cpu)
 
 static void exec_inc_r8(virtual_cpu *cpu, const instr_operands *ops)
 {
-    alu_inc_r8(cpu, get_r8(cpu, ops->r8));
+    uint8_t value = read_r8(cpu, ops->r8);
+    write_r8(cpu, ops->r8, alu_inc_r8(cpu, value));
 }
 
 static void exec_dec_r8(virtual_cpu *cpu, const instr_operands *ops)
 {
-    alu_dec_r8(cpu, get_r8(cpu, ops->r8));
+    uint8_t value = read_r8(cpu, ops->r8);
+    write_r8(cpu, ops->r8, alu_dec_r8(cpu, value));
 }
 
 static void exec_inc_r16(virtual_cpu *cpu, const instr_operands *ops)
@@ -246,7 +262,7 @@ static void exec_ld_r16_imm16(virtual_cpu *cpu, const instr_operands *ops)
 
 static void exec_ld_r8_imm8(virtual_cpu *cpu, const instr_operands *ops)
 {
-    *get_r8(cpu, ops->r8) = read_memory8(cpu->mem, cpu->pc + 1);
+    write_r8(cpu, ops->r8, read_memory8(cpu->mem, cpu->pc + 1));
 }
 
 static void exec_ld_r16mem_a(virtual_cpu *cpu, const instr_operands *ops)
@@ -409,7 +425,7 @@ static void exec_stop(virtual_cpu *cpu)
 
 static void exec_ld_r8_r8(virtual_cpu *cpu, const instr_operands *ops)
 {
-    *get_r8(cpu, ops->r8_dest) = *get_r8(cpu, ops->r8_src);
+    write_r8(cpu, ops->r8_dest, read_r8(cpu, ops->r8_src));
 }
 
 static uint8_t get_interrupt_pending(virtual_cpu *cpu)
@@ -449,7 +465,7 @@ static void exec_halt(virtual_cpu *cpu)
 
 static void exec_alu(virtual_cpu *cpu, const instr_operands *ops)
 {
-    uint8_t operand = *get_r8(cpu, ops->r8);
+    uint8_t operand = read_r8(cpu, ops->r8);
 
     switch (ops->alu_op)
     {
@@ -522,83 +538,75 @@ static void exec_alu_imm8(virtual_cpu *cpu, const decoded_instr *instr)
 /* CB prefix rotate/shift helpers - all write Z=0/1, N=0, H=0, C=carry */
 static void exec_cb_rlc(virtual_cpu *cpu, const instr_operands *ops)
 {
-    uint8_t *dest = get_r8(cpu, ops->r8);
-    uint8_t value = *dest;
+    uint8_t value = read_r8(cpu, ops->r8);
     uint8_t carry = (value >> 7) & 1;
     uint8_t result = (uint8_t)((value << 1) | carry);
-    *dest = result;
+    write_r8(cpu, ops->r8, result);
     flags_write(cpu, result == 0, 0, 0, carry);
 }
 
 static void exec_cb_rrc(virtual_cpu *cpu, const instr_operands *ops)
 {
-    uint8_t *dest = get_r8(cpu, ops->r8);
-    uint8_t value = *dest;
+    uint8_t value = read_r8(cpu, ops->r8);
     uint8_t carry = value & 1;
     uint8_t result = (uint8_t)((value >> 1) | (carry << 7));
-    *dest = result;
+    write_r8(cpu, ops->r8, result);
     flags_write(cpu, result == 0, 0, 0, carry);
 }
 
 static void exec_cb_rl(virtual_cpu *cpu, const instr_operands *ops)
 {
-    uint8_t *dest = get_r8(cpu, ops->r8);
-    uint8_t value = *dest;
+    uint8_t value = read_r8(cpu, ops->r8);
     uint8_t old_carry = flag_get(cpu, F_MASK_C);
     uint8_t new_carry = (value >> 7) & 1;
     uint8_t result = (uint8_t)((value << 1) | old_carry);
-    *dest = result;
+    write_r8(cpu, ops->r8, result);
     flags_write(cpu, result == 0, 0, 0, new_carry);
 }
 
 static void exec_cb_rr(virtual_cpu *cpu, const instr_operands *ops)
 {
-    uint8_t *dest = get_r8(cpu, ops->r8);
-    uint8_t value = *dest;
+    uint8_t value = read_r8(cpu, ops->r8);
     uint8_t old_carry = flag_get(cpu, F_MASK_C);
     uint8_t new_carry = value & 1;
     uint8_t result = (uint8_t)((value >> 1) | (old_carry << 7));
-    *dest = result;
+    write_r8(cpu, ops->r8, result);
     flags_write(cpu, result == 0, 0, 0, new_carry);
 }
 
 static void exec_cb_sla(virtual_cpu *cpu, const instr_operands *ops)
 {
-    uint8_t *dest = get_r8(cpu, ops->r8);
-    uint8_t value = *dest;
+    uint8_t value = read_r8(cpu, ops->r8);
     uint8_t carry = (value >> 7) & 1;
     uint8_t result = (uint8_t)(value << 1);
-    *dest = result;
+    write_r8(cpu, ops->r8, result);
     flags_write(cpu, result == 0, 0, 0, carry);
 }
 
 static void exec_cb_sra(virtual_cpu *cpu, const instr_operands *ops)
 {
-    uint8_t *dest = get_r8(cpu, ops->r8);
-    uint8_t value = *dest;
+    uint8_t value = read_r8(cpu, ops->r8);
     uint8_t carry = value & 1;
     uint8_t msb = value & 0x80;
     uint8_t result = (uint8_t)((value >> 1) | msb);
-    *dest = result;
+    write_r8(cpu, ops->r8, result);
     flags_write(cpu, result == 0, 0, 0, carry);
 }
 
 static void exec_cb_swap(virtual_cpu *cpu, const instr_operands *ops)
 {
-    uint8_t *dest = get_r8(cpu, ops->r8);
-    uint8_t value = *dest;
+    uint8_t value = read_r8(cpu, ops->r8);
     uint8_t result = (uint8_t)(((value & 0x0F) << 4) | ((value >> 4) & 0x0F));
-    *dest = result;
+    write_r8(cpu, ops->r8, result);
     flags_write(cpu, result == 0, 0, 0, 0);
 }
 
 static void exec_cb_srl(virtual_cpu *cpu, const instr_operands *ops)
 {
-    uint8_t *dest = get_r8(cpu, ops->r8);
-    uint8_t value = *dest;
+    uint8_t value = read_r8(cpu, ops->r8);
     uint8_t carry = value & 1;
     uint8_t result = (uint8_t)(value >> 1);
-    *dest = result;
+    write_r8(cpu, ops->r8, result);
     flags_write(cpu, result == 0, 0, 0, carry);
 }
 
@@ -848,7 +856,7 @@ static void exec_ei(virtual_cpu *cpu)
 
 static void exec_cb_bit(virtual_cpu *cpu, const instr_operands *ops)
 {
-    uint8_t value = *get_r8(cpu, ops->r8);
+    uint8_t value = read_r8(cpu, ops->r8);
     uint8_t bit = ops->bit;
     uint8_t bit_set = (value >> bit) & 1;
     /* BIT: Z = complement of bit, N = 0, H = 1, C unchanged */
@@ -857,16 +865,16 @@ static void exec_cb_bit(virtual_cpu *cpu, const instr_operands *ops)
 
 static void exec_cb_res(virtual_cpu *cpu, const instr_operands *ops)
 {
-    uint8_t *dest = get_r8(cpu, ops->r8);
+    uint8_t value = read_r8(cpu, ops->r8);
     uint8_t bit = ops->bit;
-    *dest = *dest & (uint8_t)(~(1u << bit));
+    write_r8(cpu, ops->r8, value & (uint8_t)(~(1u << bit)));
 }
 
 static void exec_cb_set(virtual_cpu *cpu, const instr_operands *ops)
 {
-    uint8_t *dest = get_r8(cpu, ops->r8);
+    uint8_t value = read_r8(cpu, ops->r8);
     uint8_t bit = ops->bit;
-    *dest = *dest | (uint8_t)(1u << bit);
+    write_r8(cpu, ops->r8, value | (uint8_t)(1u << bit));
 }
 
 static void exec_unknown(virtual_cpu *cpu, uint8_t opcode)

@@ -21,3 +21,4 @@ gbemu
 gameboy
 roms/
 debug/
+gameboy.trace.log

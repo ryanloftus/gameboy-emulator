@@ -246,8 +246,16 @@ void fetch_execute(virtual_cpu *cpu)
 
         if (!decode_cb_opcode(cb_opcode, &dec))
         {
-            printf("unimplemented CB opcode %d\n", cb_opcode);
+            if (g_instr_log) {
+                debug_log_printf("unimplemented CB opcode %d\n", cb_opcode);
+            } else {
+                printf("unimplemented CB opcode %d\n", cb_opcode);
+            }
             return;
+        }
+
+        if (g_instr_log) {
+            debug_log_instruction(cpu->pc, &dec, cpu->mem);
         }
 
         run_instruction(cpu, &dec);
@@ -258,14 +266,16 @@ void fetch_execute(virtual_cpu *cpu)
 
     if (!decode_opcode(opcode, &dec))
     {
-        printf("unimplemented opcode %d\n", opcode);
+        if (g_instr_log) {
+            debug_log_printf("unimplemented opcode %d\n", opcode);
+        } else {
+            printf("unimplemented opcode %d\n", opcode);
+        }
         return;
     }
 
-    if (g_debug_mode) {
-        printf("%04X: ", cpu->pc);
-        pretty_print_instr(&dec, cpu->mem, cpu->pc);
-        printf("\n");
+    if (g_instr_log) {
+        debug_log_instruction(cpu->pc, &dec, cpu->mem);
     }
 
     run_instruction(cpu, &dec);
