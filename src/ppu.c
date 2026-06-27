@@ -174,9 +174,9 @@ void render_sprites(ppu *ppu, uint8_t scanline)
         uint8_t palette_id = (attributes >> 4) & 1;
         uint8_t palette = ppu->mem->raw[OBJ_PALETTE_0_ADDR + palette_id];
 
-        // if (y > scanline || y + 16 < scanline) {
-        //     continue;
-        // }
+        if (y > scanline || y + 16 < scanline) {
+            continue;
+        }
 
         tile *t = get_tile(ppu->tile_cache, addressing_mode, tile_id);
         for (int tile_offset_y = 0; tile_offset_y < 8; ++tile_offset_y) {
