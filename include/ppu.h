@@ -21,6 +21,7 @@ typedef struct {
     memory *mem;
     uint32_t frame_buffer[WIDTH*HEIGHT];
     tile tile_cache[NUM_TILES];
+    uint8_t scanline_priorities[WIDTH];
 } ppu;
 
 /**

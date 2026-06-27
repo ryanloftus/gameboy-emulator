@@ -113,7 +113,11 @@ void render_background(ppu *ppu, uint8_t scanline)
         uint16_t mapx = (col + xoffset) % 256;
         uint8_t tile_id = tile_map[(mapy / 8) * 32 + (mapx / 8)];
         tile *t = get_tile(ppu->tile_cache, addressing_mode, tile_id);
-        ppu->frame_buffer[scanline * WIDTH + col] = get_color(t->pixel[mapy % 8][mapx % 8], bgp);
+        uint8_t pixel = t->pixel[mapy % 8][mapx % 8];
+        if (pixel != 0) {
+            ppu->scanline_priorities[col] = 1;
+        }
+        ppu->frame_buffer[scanline * WIDTH + col] = get_color(pixel, bgp);
     }
 }
 
@@ -127,21 +131,21 @@ void render_window(ppu *ppu, uint8_t scanline)
     uint8_t window_y = ppu->mem->raw[0xFF4A];
     uint8_t bgp = ppu->mem->raw[BGP_REG_ADDR];
 
-    if (!lcd_enabled) {
-        return;
-    }
-
-    if (!window_enabled) {
+    if (!lcd_enabled || !window_enabled || scanline < window_y) {
         return;
     }
 
     uint8_t *window_map = window_tile_map_start(ppu->mem);
     for (uint8_t col = 0; col < WIDTH; ++col) {
-        uint16_t mapy = (scanline + window_y) % 256;
+        uint16_t mapy = (scanline - window_y) % 256;
         uint16_t mapx = (col + window_x - 7) % 256;
         uint8_t tile_id = window_map[(mapy / 8) * 32 + (mapx / 8)];
         tile *t = get_tile(ppu->tile_cache, addressing_mode, tile_id);
-        ppu->frame_buffer[window_y * WIDTH + col] = get_color(t->pixel[mapy % 8][mapx % 8], bgp);
+        uint8_t pixel = t->pixel[mapy % 8][mapx % 8];
+        if (pixel != 0) {
+            ppu->scanline_priorities[col] = 1;
+        }
+        ppu->frame_buffer[scanline * WIDTH + col] = get_color(pixel, bgp);
     }
 }
 
@@ -178,15 +182,23 @@ void render_sprites(ppu *ppu, uint8_t scanline)
             continue;
         }
 
+        if (obj_size) {
+            tile_id &= 0xFE;
+        }
+
         tile *t = get_tile(ppu->tile_cache, addressing_mode, tile_id);
         for (int tile_offset_y = 0; tile_offset_y < 8; ++tile_offset_y) {
+            uint8_t fb_y = y + tile_offset_y + (obj_size && y_flip ? 8 : 0);
+            if (fb_y != scanline) {
+                continue;
+            }
+
             for (int tile_offset_x = 0; tile_offset_x < 8; ++tile_offset_x) {
-                uint8_t fb_y = y + tile_offset_y;
                 uint8_t fb_x = x + tile_offset_x;
-                if (fb_y < 0 || fb_y >= HEIGHT || fb_x < 0 || fb_x >= WIDTH) {
+                if (fb_x < 0 || fb_x >= WIDTH) {
                     continue;
                 }
-                if (priority && ppu->frame_buffer[fb_y * WIDTH + fb_x] != 0) { // TODO: Priority is incorrect, should use color index 0 check, not actual color
+                if (priority && ppu->scanline_priorities[fb_x]) {
                     continue;
                 }
                 uint8_t tile_y = y_flip ? 7 - tile_offset_y : tile_offset_y;
@@ -201,12 +213,12 @@ void render_sprites(ppu *ppu, uint8_t scanline)
             t = get_tile(ppu->tile_cache, addressing_mode, tile_id + 1);
             for (int tile_offset_y = 0; tile_offset_y < 8; ++tile_offset_y) {
                 for (int tile_offset_x = 0; tile_offset_x < 8; ++tile_offset_x) {
-                    uint8_t fb_y = y + 8 + tile_offset_y;
+                    uint8_t fb_y = y + 8 + tile_offset_y + (obj_size && y_flip ? -8 : 0);
                     uint8_t fb_x = x - tile_offset_x;
                     if (fb_y < 0 || fb_y >= HEIGHT || fb_x < 0 || fb_x >= WIDTH) {
                         continue;
                     }
-                    if (priority && ppu->frame_buffer[fb_y * WIDTH + fb_x] != 0) {
+                    if (priority && ppu->scanline_priorities[fb_x]) {
                         continue;
                     }
                     uint8_t tile_y = y_flip ? 7 - tile_offset_y : tile_offset_y;
@@ -229,6 +241,7 @@ void render(ppu *ppu)
     }
 
     if (scanline < 144) {
+        memset(ppu->scanline_priorities, 0, WIDTH * sizeof(uint8_t));
         render_background(ppu, scanline);
         render_window(ppu, scanline);
         render_sprites(ppu, scanline);
@@ -243,4 +256,5 @@ void init_ppu(ppu *ppu, memory *mem)
     ppu->mem = mem;
     memset(ppu->frame_buffer, 0, WIDTH * HEIGHT * sizeof(uint32_t));
     memset(ppu->tile_cache, 0, NUM_TILES * sizeof(tile));
+    memset(ppu->scanline_priorities, 0, WIDTH * sizeof(uint8_t));
 }
