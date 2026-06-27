@@ -603,6 +603,21 @@ void init_memory(memory *mem, const char *rom_path)
 }
 
 /* ------------------------------------------------------------------ */
+/*  Joypad (P1 / $FF00)                                                */
+/* ------------------------------------------------------------------ */
+
+static uint8_t read_joypad(const memory *mem)
+{
+    /* raw[$FF00] stores the row-select lines (bits 5-4) from the last write. */
+    return (uint8_t)(0xCF | (mem->raw[JOYPAD_REG_ADDR] & 0x30));
+}
+
+static void write_joypad(memory *mem, uint8_t value)
+{
+    mem->raw[JOYPAD_REG_ADDR] = value & 0x30;
+}
+
+/* ------------------------------------------------------------------ */
 /*  Memory reads & writes                                             */
 /* ------------------------------------------------------------------ */
 
@@ -611,6 +626,10 @@ uint8_t read_memory8(memory *mem, uint16_t addr)
     /* DIV register returns upper 8 bits of internal divider counter */
     if (addr == DIV_REG_ADDR) {
         return (uint8_t)(mem->div_counter >> 8);
+    }
+
+    if (addr == JOYPAD_REG_ADDR) {
+        return read_joypad(mem);
     }
 
     if (is_cartridge_backed_addr(addr)) {
@@ -746,6 +765,11 @@ void write_memory8(memory *mem, uint16_t addr, uint8_t value)
      * character in SB ($FF01) is ready to be transmitted */
     if (addr == SC_REG_ADDR && value == 0x81) {
         serial_transmit_byte(mem->raw[SB_REG_ADDR]);
+    }
+
+    if (addr == JOYPAD_REG_ADDR) {
+        write_joypad(mem, value);
+        return;
     }
 
     addr = sanitize_addr(addr);

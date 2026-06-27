@@ -29,6 +29,9 @@
 #define TMA_REG_ADDR  0xFF06
 #define TAC_REG_ADDR  0xFF07
 
+/* Joypad register */
+#define JOYPAD_REG_ADDR 0xFF00
+
 /* Interrupt flag register */
 #define IF_REG_ADDR   0xFF0F
 

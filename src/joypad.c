@@ -1,14 +1,12 @@
 #include "joypad.h"
 
-#define JOYPAD_REG_ADDR 0xFF00
-
 void init_joypad(joypad *joypad, memory *mem)
 {
     joypad->mem = mem;
-    mem->raw[JOYPAD_REG_ADDR] = 0xCF;
+    mem->raw[JOYPAD_REG_ADDR] = 0x30;
 }
 
 void update_joypad(joypad *joypad)
 {
-    uint8_t joypad_reg = joypad->mem->raw[JOYPAD_REG_ADDR];
+    (void)joypad;
 }

@@ -10,10 +10,12 @@
 
 #define SCALE 4
 
-/* One Game Boy frame is 154 scanlines × 456 T-cycles = 70224 T-cycles */
-#define CYCLES_PER_DOT 4
+/* One Game Boy frame is 154 scanlines × 456 T-cycles = 70224 T-cycles.
+ * cpu->cycles counts M-cycles (4 T-cycles each). */
 #define DOTS_PER_SCANLINE 456
+#define M_CYCLES_PER_SCANLINE (DOTS_PER_SCANLINE / 4)
 #define SCANLINES_PER_FRAME 154
+#define M_CYCLES_PER_FRAME (M_CYCLES_PER_SCANLINE * SCANLINES_PER_FRAME)
 
 int main(int argc, char *argv[])
 {
@@ -70,7 +72,7 @@ int main(int argc, char *argv[])
     init_joypad(&joypad, &mem);
 
     uint64_t next_render = 0;
-    uint64_t next_vblank = 0;
+    uint64_t next_vblank = M_CYCLES_PER_FRAME;
 
     int running = 1;
     while (running) {
@@ -86,7 +88,7 @@ int main(int argc, char *argv[])
             fetch_execute(&cpu);
         }
 
-        next_render += CYCLES_PER_DOT * DOTS_PER_SCANLINE;
+        next_render += M_CYCLES_PER_SCANLINE;
         render(&ppu);
 
         if (!g_debug_mode && cpu.cycles >= next_vblank) {
@@ -94,6 +96,7 @@ int main(int argc, char *argv[])
             SDL_RenderClear(renderer);
             SDL_RenderCopy(renderer, texture, NULL, NULL);
             SDL_RenderPresent(renderer);
+            next_vblank += M_CYCLES_PER_FRAME;
         }
     }
 
