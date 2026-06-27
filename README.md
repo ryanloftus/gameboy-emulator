@@ -2,7 +2,8 @@
 
 A Gameboy Emulator.
 
-For an overview of the codebase, file layout, and implementation status, see [ARCHITECTURE.md](ARCHITECTURE.md).
+<img width="658" height="628" alt="image" src="https://github.com/user-attachments/assets/8ffce6ae-10ec-4d34-ab69-971567170dc8" />
+
 
 ## Build and Run
 
@@ -13,11 +14,9 @@ Requirements:
 
 Run `make` to build the release version.
 
-Run `make BUILD=debug` to build the debug version.
-
 ## Testing
 
-Run tests with `test.sh`.
+Run tests with `test.sh`. Or run `make tests && ./run_tests`
 
 ## References
 
