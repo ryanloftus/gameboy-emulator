@@ -36,7 +36,7 @@ UNITY_OBJ  = $(BUILD_DIR)/$(UNITY_DIR)/unity.o
 OBJ_DIRS = $(sort $(dir $(OBJS) $(TEST_OBJS) $(UNITY_OBJ)))
 
 # Test CFLAGS: same as CFLAGS but without SDL (tests don't need it)
-TEST_CFLAGS = -Wall -Wextra -std=c11 -Iinclude -I$(UNITY_DIR)
+TEST_CFLAGS = -Wall -Wextra -std=c11 -Iinclude -I$(UNITY_DIR) $(shell sdl2-config --cflags)
 ifeq ($(BUILD),debug)
     TEST_CFLAGS += -g -O0 -fsanitize=address,undefined
 else

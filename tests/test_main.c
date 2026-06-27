@@ -316,6 +316,12 @@ void test_oam_dma_transfers_one_byte_per_m_cycle(void);
 void test_oam_dma_blocks_cpu_access_except_hram(void);
 void test_oam_dma_restart(void);
 
+/* test_joypad.c */
+void test_joypad_select_buttons_reads_action_row(void);
+void test_joypad_select_dpad_reads_direction_row(void);
+void test_joypad_select_none_reads_all_released(void);
+void test_joypad_select_write_fires_if_on_held_button(void);
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -625,6 +631,11 @@ int main(void)
     RUN_TEST(test_oam_dma_transfers_one_byte_per_m_cycle);
     RUN_TEST(test_oam_dma_blocks_cpu_access_except_hram);
     RUN_TEST(test_oam_dma_restart);
+
+    RUN_TEST(test_joypad_select_buttons_reads_action_row);
+    RUN_TEST(test_joypad_select_dpad_reads_direction_row);
+    RUN_TEST(test_joypad_select_none_reads_all_released);
+    RUN_TEST(test_joypad_select_write_fires_if_on_held_button);
 
     return UNITY_END();
 }

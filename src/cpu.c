@@ -213,6 +213,18 @@ void fetch_execute(virtual_cpu *cpu)
     debug_assert(cpu != NULL);
     debug_assert(cpu->mem != NULL);
 
+    if (cpu->is_stopped) {
+        memory *mem = cpu->mem;
+        uint8_t iflag = mem->io_registers[IF_REG_ADDR & 0xFF];
+        if (mem->joypad_buttons != 0 || (iflag & 0x10) != 0) {
+            cpu->is_stopped = 0;
+        } else {
+            cpu->cycles += 1;
+            update_timers(cpu, 1);
+            return;
+        }
+    }
+
     if (service_interrupts(cpu)) {
         cpu->cycles += 5;
         update_timers(cpu, 5);

@@ -640,7 +640,7 @@ static void start_oam_dma(memory *mem, uint8_t value)
 
 static void write_joypad(memory *mem, uint8_t value)
 {
-    mem->raw[JOYPAD_REG_ADDR] = value & 0x30;
+    joypad_on_p1_write(mem, value);
 }
 
 static uint8_t read_joypad(const memory *mem)
